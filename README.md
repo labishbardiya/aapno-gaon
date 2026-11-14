@@ -1,98 +1,129 @@
 # mySociety
 
-A neighborhood issue register for residents to report local needs and for staff to track them through resolution.
+mySociety lets residents report local problems and track their report status.
 
-## Run locally
+[Live application on Vercel](https://mysociety-story.vercel.app) · [GitHub Actions](https://github.com/labishbardiya/mySociety/actions)
 
-Use Node.js 24 and npm.
+## Application pages
+
+| Page | Function |
+| --- | --- |
+| `/report` | Submit a report with a ward, category, landmark, and description. You can add a map pin, photo, or private callback number. |
+| `/track/<token>` | View the status and due date of your report. Keep this link private. |
+| `/register` | Find approved reports. Filter the results or sort them by support count. Open a report to see its updates and approved photos. |
+| `/overview` | View totals, resolution rates, and overdue reports by ward. |
+| `/staff` | Review reports, set due dates, and record resolutions. |
+| `/admin` | Manage routing rules, transfer reports, and review community submissions. |
+| `/services` | View the ward directory, notices, guides, contacts, and the voter portal link. Send a lost-item, found-item, blood, or donor submission. |
+
+Use the language button to select English or Hindi. Use **Menu → Install app** to see the available installation options.
+
+## Report workflow
+
+```mermaid
+flowchart LR
+    Submit[Resident submits report] --> Review[Staff reviews report]
+    Review -->|Approve| Register[Report appears in public register]
+    Review -->|Reject| Reject[Receipt shows rejection]
+    Register --> Work[Staff starts work]
+    Work --> Resolve[Staff records resolution]
+```
+
+The private receipt shows the report status after submission.
+
+## Configure the database
+
+1. Apply the SQL files in [supabase/migrations](supabase/migrations) in filename order.
+2. For demo data, run [supabase/seed.sql](supabase/seed.sql).
+3. Copy `.env.example` to `.env.local`.
+4. Set the variables below.
+
+| Variable | Value |
+| --- | --- |
+| `DATABASE_URL` | PostgreSQL connection string. Use a TLS connection for hosted PostgreSQL. |
+| `RECEIPT_SECRET` | Stable secret. Use `openssl rand -hex 32` to generate it. |
+| `SUPABASE_URL` | Supabase project URL for staff sign-in. |
+| `SUPABASE_PUBLISHABLE_KEY` | Supabase publishable key for staff sign-in. |
+| `NEXT_PUBLIC_MAP_TILE_URL` | Optional map tile URL. The default uses OpenStreetMap. |
+| `NEXT_PUBLIC_MAP_ATTRIBUTION` | Optional attribution for the selected tile source. |
+
+Keep the database connection string and receipt secret in server environment variables.
+
+## Run the application
+
+Use Node.js 24 and npm for local development.
 
 ```sh
 npm ci
 npm run dev
 ```
 
-Open http://localhost:3000 and check http://localhost:3000/api/health. The homepage and health endpoint work without a database. Report submission requires the setup below.
-
-## Report intake
-
-Apply the SQL migration in `supabase/migrations/` to a development PostgreSQL or Supabase database. Apply `supabase/seed.sql` for three sample wards. Copy `.env.example` to `.env.local`, then set `DATABASE_URL` and generate `RECEIPT_SECRET` using `openssl rand -hex 32`. Keep the secret stable across deployments because pending retries use it to reproduce the private receipt. Use a server-only database connection with TLS for hosted Supabase.
-
-```sh
-KEY=$(uuidgen)
-curl -i http://localhost:3000/api/reports \
-  -H "Idempotency-Key: $KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"wardId":1,"category":"streetlights","landmark":"Near the bus stop","description":"The streetlight is out."}'
-```
-
-The first request returns HTTP 201 and a ticket. Repeat the same command with the same key and payload within 24 hours to get HTTP 200 and the same receipt. Reusing the key for different data or after the 24-hour replay window returns HTTP 409. Optional `location` has `latitude`, `longitude`, `source` (`device` or `manual`), and optional device `accuracyM`. Open the receipt URL to track the report. Use /report to submit through the website and /register to browse approved reports. Staff review is available at /staff. Ward summaries are available at /overview.
-
-## Docker
+For Docker, set a database URL that the container can reach.
 
 ```sh
 docker build -t mysociety .
-docker run --rm -p 3000:3000 mysociety
+docker run --rm --env-file .env.local -p 3000:3000 mysociety
 ```
 
-## Architecture and delivery
+For either method, open [localhost:3000](http://localhost:3000). Check [the health endpoint](http://localhost:3000/api/health).
 
-Next.js and TypeScript serve the website and HTTP endpoints. Mantine provides the UI components. Supabase PostgreSQL provides durable reports, and Supabase Auth is planned for invited staff access. GitHub Actions checks types, builds the Docker image, and smoke-checks its HTTP endpoints on pushes and pull requests. The team checks the resident and staff workflows manually. Vercel will deploy the reviewed production branch.
+## Set up staff access
 
-Live Vercel URL will be added after deployment.
+1. Create or invite the staff user in Supabase Auth.
+2. Copy the user ID.
+3. Add the user ID to `mysociety.staff_members`.
+4. For an administrator, set `is_admin` to `true` for that row.
+5. Sign in at `/staff`.
 
-## Contributing
+Use `/admin` to assign a staff member to a ward and category. New reports follow the rule. Staff can claim reports that have no assignment. Use the transfer control to change the owner of an existing report.
 
-Check that CI passes before merging changes.
+Set the ward center coordinates in `mysociety.wards` to show ward markers. Add local search entries to `mysociety.local_places`.
 
-## Staff review and ward overview
+## Architecture and deployment
 
-Apply all SQL migrations in filename order. Set `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`, create or invite a staff user in Supabase Auth, and insert that user's UUID in `mysociety.staff_members`. Only listed users can use the queue. Sign in again when the access token expires.
-
-At `/staff`, approve or reject a submission. Approved reports appear in the public register and active queue. Start work before resolving a report, and enter a public resolution note when closing it.
-
-Set `center_latitude` and `center_longitude` on each ward using verified local coordinates to display ward markers. The table works before those coordinates are configured. The overview groups reports by ward and uses ward-center coordinates.
-
-## Verify a build
-
-GitHub Actions builds the Docker image, applies all migrations to a temporary PostgreSQL database, and checks the running app. It verifies that retrying a submission returns the same receipt, creates one report, and keeps the report out of the public register until review. If a run fails, open the failed step and the container log in Actions.
-
-For a manual acceptance check, use a development database and a configured staff account.
-
-1. Submit a sample report with a ward and landmark. Try both allowing and declining location permission. If you share a pin, move it before submitting.
-2. Open the private receipt and confirm the report is waiting for review. Search for its ticket in the public register and confirm it has no result.
-3. Sign in as staff, approve the report, start work, and resolve it with a note. Confirm the public register and private receipt reflect the status.
-4. Open the ward overview and verify that resolving the report decreases the pending count and increases the resolved count under the same filters.
-
-### Assignment and deadlines
-
-Apply the routing migration before deploying this build. Configure each ward and category using an existing staff UID. For example:
-
-```sql
-insert into mysociety.routing_rules (ward_id, category, staff_id)
-values (1, 'water', 'REPLACE_WITH_STAFF_UID'::uuid)
-on conflict (ward_id, category) do update set staff_id = excluded.staff_id;
+```mermaid
+flowchart LR
+    Browser[Resident and staff browsers] --> App[Next.js on Vercel]
+    App --> Database[(Supabase PostgreSQL)]
+    App --> Auth[Supabase Auth]
+    GitHub[GitHub] -->|Push to main| App
+    GitHub -->|Push or pull request| CI[GitHub Actions]
+    CI --> Docker[Docker build and HTTP checks]
 ```
 
-New reports use these rules at submission. Staff can claim unassigned reports from the queue. Once an assigned report is approved, its owner can publish a due date from Active reports. The date appears in private tracking and in the public register. An unresolved report becomes overdue on the following calendar day in India.
+Mantine provides interface components. MapLibre shows maps. PostgreSQL stores reports and photos.
 
-### Administration
+1. Import the GitHub repository into Vercel.
+2. Select the Next.js preset.
+3. Select Node.js 24.
+4. Set the server environment variables.
+5. Apply new database migrations before you deploy code that uses them.
 
-After applying the administration migration, an authorized database operator can enable the admin dashboard for an existing staff user:
+## Verify the release
 
-```sql
-update mysociety.staff_members
-set is_admin = true
-where user_id = 'REPLACE_WITH_STAFF_UID'::uuid;
-```
+GitHub Actions checks types and builds the Docker image on each push and pull request. It applies the migrations to test PostgreSQL. It checks report submission, duplicate retries, private tracking, and public visibility.
 
-Sign in at `/staff`, then open `/admin` to edit routing rules, transfer reports, and see recent activity. Routing changes apply to new reports. Use the transfer control for existing reports.
+1. Submit a demo report for a ward and category with a routing rule.
+2. Open the private receipt.
+3. Make sure that the report is absent from the public register before approval.
+4. Sign in as the assigned staff member.
+5. Approve the report.
+6. Publish a due date.
+7. Start work.
+8. Resolve the report with a public note and, if available, an approved after photo.
+9. Check the final status on the receipt and in the public register.
+10. Check the ward totals in the overview.
 
-## Open311 public data
+## HTTP interfaces
 
-The read-only GeoReport v2 JSON adapter exposes:
+| Endpoint | Result |
+| --- | --- |
+| `GET /api/health` | Application health. |
+| `POST /api/reports` | Submit JSON with `wardId`, `category`, `landmark`, and `description`. Send a UUID v4 in the `Idempotency-Key` header. |
+| `GET /open311/v2/services.json` | Civic service categories. |
+| `GET /open311/v2/requests.json` | Up to 100 approved reports. Use service code, status, dates, or request IDs as filters. |
+| `GET /open311/v2/requests/<ticket>.json` | One approved report. |
 
-- `GET /open311/v2/services.json` for civic categories.
-- `GET /open311/v2/requests.json` for up to 100 approved reports. Filter by `service_code`, `status` (open or closed), or an ISO 8601 date range up to 90 days. Without dates, the list defaults to the last 90 days. Use `service_request_id` for a direct lookup.
-- `GET /open311/v2/requests/<ticket>.json` for one approved report.
+A new report returns HTTP 201. An identical retry within 24 hours returns HTTP 200 with the same receipt. A conflict returns HTTP 409. The daily report limit returns HTTP 429.
 
-Resolved reports map to closed. Other published reports map to open. Responses contain the public description and ward. Use the report form to submit issues.
+Open311 returns public data only. It maps resolved reports to `closed` and other approved reports to `open`. The date range is at most 90 days. Use the report form to submit a report.
