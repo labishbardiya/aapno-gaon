@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 
 const PinMap = dynamic(() => import('./pin-map'), { ssr: false });
 
@@ -11,14 +11,34 @@ type Receipt = { ticketCode: string; receiptUrl: string };
 export default function ReportForm({ wards }: { wards: { id: number; name: string }[] }) {
   const retry = useRef<{ body: string; key: string } | null>(null);
   const [pin, setPin] = useState<Pin | null>(null);
-  const [showMap, setShowMap] = useState(false);
+  const [deviceCenter, setDeviceCenter] = useState<Pin | null>(null);
+  const [confirmed, setConfirmed] = useState(false);
+  const moved = useRef(false);
   const [locating, setLocating] = useState(false);
   const [locationMessage, setLocationMessage] = useState('');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
   const [receipt, setReceipt] = useState<Receipt | null>(null);
 
+  useEffect(() => {
+    let active = true;
+    if (navigator.permissions && navigator.geolocation) {
+      navigator.permissions.query({ name: 'geolocation' }).then(permission => {
+        if (!active || permission.state !== 'granted') return;
+        navigator.geolocation.getCurrentPosition(({ coords }) => {
+          if (active && !moved.current && Math.abs(coords.latitude - 26.972) < 0.15 &&
+              Math.abs(coords.longitude - 75.386) < 0.15) {
+            setDeviceCenter({ latitude: coords.latitude, longitude: coords.longitude, source: 'device' });
+          }
+        }, () => {}, { timeout: 5000 });
+      }).catch(() => {});
+    }
+    return () => { active = false; };
+  }, []);
+
   function locate() {
+    moved.current = true;
+
     if (!navigator.geolocation) {
       setLocationMessage('Location is unavailable. You can submit with a landmark.');
       return;
@@ -27,7 +47,8 @@ export default function ReportForm({ wards }: { wards: { id: number; name: strin
     setLocationMessage('');
     navigator.geolocation.getCurrentPosition(({ coords }) => {
       setPin({ latitude: coords.latitude, longitude: coords.longitude, accuracyM: coords.accuracy, source: 'device' });
-      setShowMap(true);
+      setConfirmed(false);
+      setDeviceCenter(null);
       setLocationMessage(`Estimated accuracy: ${Math.round(coords.accuracy)} m.`);
       setLocating(false);
     }, () => {
@@ -39,10 +60,14 @@ export default function ReportForm({ wards }: { wards: { id: number; name: strin
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (pending) return;
+    if (pin && !confirmed) {
+      setError('Confirm or remove the pin before submitting.');
+      return;
+    }
     const data = new FormData(event.currentTarget);
     const body = JSON.stringify({
       wardId: Number(data.get('ward')), category: data.get('category'),
-      landmark: String(data.get('landmark')).trim(), description: String(data.get('description')).trim(), location: pin,
+      landmark: String(data.get('landmark')).trim(), description: String(data.get('description')).trim(), location: confirmed ? pin : null,
     });
     if (retry.current?.body !== body) retry.current = { body, key: crypto.randomUUID() };
     setPending(true);
@@ -79,14 +104,19 @@ export default function ReportForm({ wards }: { wards: { id: number; name: strin
       <label>Describe the issue<textarea name="description" rows={5} maxLength={2000} required /></label>
       <fieldset><legend>Issue location (optional)</legend>
         <button type="button" onClick={locate} disabled={locating || pending}>{locating ? 'Finding location…' : 'Use my current location'}</button>
-        {!showMap && <button type="button" onClick={() => setShowMap(true)}>Place a pin on the map</button>}
-        {showMap && <><p>Click the map or drag the pin to mark the issue.</p>
-          <PinMap center={pin} onChange={point => { setPin({ ...point, source: 'manual' }); setLocationMessage(''); }} />
-        </>}
+        <p>Tap the map or drag the pin to mark where the issue is. You can also report using just the ward and landmark.</p>
+        <PinMap center={pin} deviceCenter={deviceCenter} onChange={point => {
+          moved.current = true;
+          setPin({ ...point, source: 'manual' });
+          setConfirmed(false);
+          setLocationMessage('');
+        }} />
         {locationMessage && <p role="status">{locationMessage}</p>}
-        {pin && <><p>{pin.latitude.toFixed(5)}, {pin.longitude.toFixed(5)}</p>
-          <p>Share these coordinates only if you are at the issue location.</p>
-          <button type="button" onClick={() => { setPin(null); setLocationMessage(''); }}>Remove location</button></>}
+        {pin && <>
+          <p role="status">{confirmed ? 'Issue location confirmed.' : 'Confirm this pin to include it with your report.'}</p>
+          {!confirmed && <button type="button" onClick={() => setConfirmed(true)}>Confirm issue location</button>}
+          <button type="button" onClick={() => { setPin(null); setConfirmed(false); setLocationMessage(''); }}>Remove location</button>
+        </>}
       </fieldset>
       {error && <p role="alert">{error}</p>}
       <button disabled={pending || locating}>{pending ? 'Submitting…' : 'Submit report'}</button>

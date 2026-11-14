@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 
 type Point = { latitude: number; longitude: number };
 
-export default function PinMap({ center, onChange }: { center: Point | null; onChange: (point: Point) => void }) {
+export default function PinMap({ center, deviceCenter, onChange }: { center: Point | null; deviceCenter: Point | null; onChange: (point: Point) => void }) {
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<Map | null>(null);
   const marker = useRef<Marker | null>(null);
@@ -19,7 +19,7 @@ export default function PinMap({ center, onChange }: { center: Point | null; onC
     let instance: Map;
     try {
       instance = new Map({
-        container: container.current, center: [78.9, 22.8], zoom: 4, maxZoom: 19,
+        container: container.current, center: [75.386, 26.972], zoom: 14, maxZoom: 19,
         renderWorldCopies: false, cooperativeGestures: true,
         style: {
           version: 8,
@@ -32,6 +32,7 @@ export default function PinMap({ center, onChange }: { center: Point | null; onC
         },
       });
     } catch {
+      queueMicrotask(() => setFailed(true));
       return;
     }
     map.current = instance;
@@ -40,6 +41,12 @@ export default function PinMap({ center, onChange }: { center: Point | null; onC
     instance.on('click', ({ lngLat }) => change.current({ latitude: lngLat.lat, longitude: lngLat.wrap().lng }));
     return () => { marker.current?.remove(); marker.current = null; map.current = null; instance.remove(); };
   }, []);
+
+  useEffect(() => {
+    if (deviceCenter) map.current?.jumpTo({
+      center: [deviceCenter.longitude, deviceCenter.latitude], zoom: 16,
+    });
+  }, [deviceCenter]);
 
   useEffect(() => {
     const instance = map.current;

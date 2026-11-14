@@ -66,6 +66,17 @@ export async function createReport(key: string, input: ReportInput) {
          values ($1, 'REPORT_CREATED', 'SUBMITTED')`, [report.id],
       );
       await client.query(
+        `with assigned as (
+           update mysociety.reports r set assigned_staff_id = rule.staff_id
+           from mysociety.routing_rules rule
+           where r.id = $1 and r.ward_id = rule.ward_id and r.category = rule.category
+           returning r.id, r.assigned_staff_id
+         )
+         insert into mysociety.report_events (report_id, event_type, note)
+         select id, 'AUTO_ASSIGNED', assigned_staff_id::text from assigned`, [report.id],
+      );
+
+      await client.query(
         `insert into mysociety.submission_keys (key, request_hash, report_id, expires_at)
          values ($1, $2, $3, now() + interval '24 hours')`, [key, requestHash, report.id],
       );
@@ -100,8 +111,8 @@ export async function getWards() {
 }
 
 export async function getReceipt(token: string) {
-  const { rows } = await readPool().query<{ ticket_code: string; status: string; visibility: string }>(
-    'select ticket_code, status, visibility from mysociety.reports where receipt_token_hash = $1',
+  const { rows } = await readPool().query<{ ticket_code: string; status: string; visibility: string; due_on: string | null }>(
+    'select ticket_code, status, visibility, due_on::text from mysociety.reports where receipt_token_hash = $1',
     [sha256(token)],
   );
   return rows[0];
@@ -109,9 +120,10 @@ export async function getReceipt(token: string) {
 
 export async function getPublicReports(q: string, ward: string, status: string, category: string, before?: string) {
   const { rows } = await readPool().query<{
-    ticket_code: string; ward: string; category: string; description: string; status: string;
+    ticket_code: string; ward: string; category: string; description: string; status: string; due_on: string | null; overdue: boolean;
   }>(
-    `select r.ticket_code, w.name as ward, r.category, r.description, r.status
+    `select r.ticket_code, w.name as ward, r.category, r.description, r.status, r.due_on::text,
+       coalesce(r.status <> 'RESOLVED' and r.due_on < (now() at time zone 'Asia/Kolkata')::date, false) as overdue
      from mysociety.reports r join mysociety.wards w on w.id = r.ward_id
      where r.visibility = 'APPROVED'
        and ($1 = '' or strpos(lower(r.description || ' ' || r.ticket_code), lower($1)) > 0)

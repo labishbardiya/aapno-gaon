@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 type Report = {
   id: string; version: number; ticket_code: string; ward: string; landmark: string;
   description: string; category: string; status: string; visibility: string;
-  latitude: number | null; longitude: number | null; resolution_note: string | null;
+  latitude: number | null; longitude: number | null; resolution_note: string | null; due_on: string | null; overdue: boolean; assigned_to_me: boolean | null;
 };
 
 export default async function StaffPage({ searchParams }: {
@@ -28,14 +28,16 @@ export default async function StaffPage({ searchParams }: {
   const offset = /^\d{1,5}$/.test(page ?? '') ? Number(page) * 30 : 0;
   const { rows } = await readPool().query<Report>(
     `select r.id, r.version, r.ticket_code, w.name as ward, r.landmark, r.description,
-       r.category, r.status, r.visibility, r.latitude, r.longitude,
+       r.category, r.status, r.visibility, r.latitude, r.longitude, r.due_on::text,
+       r.assigned_staff_id = $3 as assigned_to_me,
+       r.status <> 'RESOLVED' and r.due_on < (now() at time zone 'Asia/Kolkata')::date as overdue,
        (select note from mysociety.report_events e where e.report_id = r.id and e.event_type = 'RESOLVE'
         order by e.id desc limit 1) as resolution_note
      from mysociety.reports r join mysociety.wards w on r.ward_id = w.id
-     where case $1 when 'work' then r.visibility = 'APPROVED' and r.status <> 'RESOLVED'
+     where (r.assigned_staff_id is null or r.assigned_staff_id = $3) and case $1 when 'work' then r.visibility = 'APPROVED' and r.status <> 'RESOLVED'
        when 'closed' then r.visibility = 'REJECTED' or r.status = 'RESOLVED'
        else r.visibility = 'PENDING_REVIEW' end
-     order by r.created_at, r.id limit 31 offset $2`, [filter, offset],
+     order by r.created_at, r.id limit 31 offset $2`, [filter, offset, staff],
   );
   return <main className="content"><a href="/">mySociety</a><h1>Review submissions</h1>
     <nav className="home-links" aria-label="Staff views">
@@ -51,9 +53,22 @@ export default async function StaffPage({ searchParams }: {
     <ul className="register-list">{rows.slice(0, 30).map(report => <li key={report.id}>
       <details>
         <summary><strong>{report.ticket_code}</strong> · {report.ward} · {report.category} · {report.visibility === 'REJECTED' ? 'Rejected' : report.status.replaceAll('_', ' ').toLowerCase()}</summary>
+        <p>{report.assigned_to_me ? 'Assigned to you' : 'Unassigned'}</p>
+        {report.due_on && <p>Due: {report.due_on}{report.overdue ? ' · Overdue' : ''}</p>}
         <p>{report.landmark}</p><p>{report.description}</p>
         {report.latitude !== null && <p>Issue location: {report.latitude}, {report.longitude}</p>}
         {report.resolution_note && <p>Resolution: {report.resolution_note}</p>}
+        {filter !== 'closed' && !report.assigned_to_me && <form action={updateReport} className="report-form">
+          <input type="hidden" name="id" value={report.id} />
+          <input type="hidden" name="version" value={report.version} />
+          <button name="operation" value="claim">Assign to me</button>
+        </form>}
+        {filter === 'work' && report.assigned_to_me && <form action={updateReport} className="report-form">
+          <input type="hidden" name="id" value={report.id} />
+          <input type="hidden" name="version" value={report.version} />
+          <label>Expected completion date<input type="date" name="deadline" defaultValue={report.due_on ?? ''} required /></label>
+          <button name="operation" value="deadline">Publish deadline</button>
+        </form>}
         {filter !== 'closed' && <form action={updateReport} className="report-form">
           <input type="hidden" name="id" value={report.id} />
           <input type="hidden" name="version" value={report.version} />

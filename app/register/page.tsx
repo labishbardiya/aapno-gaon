@@ -31,6 +31,7 @@ export default async function Register({ searchParams }: { searchParams: Promise
     <h2>Reports</h2>
     {reports.length ? <ul className="register-list">{reports.map(report => <li key={report.ticket_code}>
       <strong>{report.ticket_code}</strong> · {report.ward} · {statuses[report.status as keyof typeof statuses]}
+      {report.due_on && <p>Due <time dateTime={report.due_on}>{report.due_on}</time>{report.overdue && ' · Overdue'}</p>}
       <p>{report.category} — {report.description}</p>
     </li>)}</ul> : <p>No approved reports match these filters.</p>}
     {results.length > 50 && next && <a href={`/register?${new URLSearchParams({ q, ward, status, category, before: next })}`}>Next page</a>}

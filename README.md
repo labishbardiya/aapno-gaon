@@ -62,3 +62,15 @@ For a manual acceptance check, use a development database and a configured staff
 2. Open the private receipt and confirm the report is waiting for review. Search for its ticket in the public register and confirm it has no result.
 3. Sign in as staff, approve the report, start work, and resolve it with a note. Confirm the public register and private receipt reflect the status.
 4. Open the ward overview and verify that resolving the report decreases the pending count and increases the resolved count under the same filters.
+
+### Assignment and deadlines
+
+Apply the routing migration before deploying this build. Configure each ward and category using an existing staff UID. For example:
+
+```sql
+insert into mysociety.routing_rules (ward_id, category, staff_id)
+values (1, 'water', 'REPLACE_WITH_STAFF_UID'::uuid)
+on conflict (ward_id, category) do update set staff_id = excluded.staff_id;
+```
+
+New reports use these rules at submission. Staff can claim unassigned reports from the queue. Once an assigned report is approved, its owner can publish a due date from Active reports. The date appears in private tracking and in the public register. An unresolved report becomes overdue on the following calendar day in India.

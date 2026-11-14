@@ -33,26 +33,29 @@ export async function signOut() {
 
 const change = z.object({
   id: z.uuid(), version: z.coerce.number().int().positive().max(2147483647),
-  operation: z.enum(['approve', 'reject', 'start', 'resolve']), note: z.string().trim().max(500),
+  operation: z.enum(['approve', 'reject', 'start', 'resolve', 'deadline', 'claim']), note: z.string().trim().max(500), deadline: z.union([z.literal(''), z.iso.date()]),
 });
 
 export async function updateReport(form: FormData) {
   const staff = await getStaff();
   if (!staff) redirect('/staff');
-  const input = change.safeParse(Object.fromEntries(["id", "version", "operation", "note"].map(key => [key, form.get(key) ?? ""])));
-  if (!input.success || (input.data.operation === 'resolve' && !input.data.note)) {
+  const input = change.safeParse(Object.fromEntries(["id", "version", "operation", "note", "deadline"].map(key => [key, form.get(key) ?? ""])));
+  if (!input.success || (input.data.operation === 'resolve' && !input.data.note) || (input.data.operation === 'deadline' && !input.data.deadline)) {
     redirect('/staff?error=invalid');
   }
-  const { id, version, operation, note } = input.data;
+  const { id, version, operation, note, deadline } = input.data;
   const { rowCount } = await readPool().query(
     `with eligible as (
-       select id, status, visibility from mysociety.reports
+       select id, status, visibility, due_on from mysociety.reports
        where id = $1 and version = $2
+         and (assigned_staff_id is null or assigned_staff_id = $3)
          and exists (select 1 from mysociety.staff_members where user_id = $3)
          and case $4
+           when 'claim' then assigned_staff_id is null and visibility <> 'REJECTED' and status <> 'RESOLVED'
            when 'approve' then visibility = 'PENDING_REVIEW'
            when 'reject' then visibility = 'PENDING_REVIEW'
            when 'start' then visibility = 'APPROVED' and status = 'SUBMITTED'
+           when 'deadline' then assigned_staff_id = $3 and visibility = 'APPROVED' and status <> 'RESOLVED'
            when 'resolve' then visibility = 'APPROVED' and status = 'IN_PROGRESS'
          end
        for update
@@ -60,13 +63,18 @@ export async function updateReport(form: FormData) {
        update mysociety.reports r set
          status = case $4 when 'start' then 'IN_PROGRESS' when 'resolve' then 'RESOLVED' else e.status end,
          visibility = case $4 when 'approve' then 'APPROVED' when 'reject' then 'REJECTED' else e.visibility end,
+         assigned_staff_id = case when $4 = 'claim' then $3 else r.assigned_staff_id end,
+         due_on = case when $4 = 'deadline' then $6::date else r.due_on end,
          version = r.version + 1, updated_at = now()
        from eligible e where r.id = e.id
-       returning r.id, e.status as old_status, r.status
+       returning r.id, e.status as old_status, r.status, e.due_on as old_due_on, r.due_on
      )
      insert into mysociety.report_events (report_id, actor_id, event_type, old_status, new_status, note)
-     select id, $3, upper($4), old_status, status, case when $4 = 'resolve' then $5 else null end from changed`,
-    [id, version, staff, operation, note],
+     select id, $3, upper($4), old_status, status, case when $4 = 'resolve' then $5 when $4 = 'deadline' then coalesce(old_due_on::text, 'unset') || ' → ' || due_on::text end from changed`,
+    [id, version, staff, operation, note, deadline || null],
   );
-  redirect('/staff' + (rowCount ? '?saved=1' : '?error=conflict'));
+  redirect('/staff?' + new URLSearchParams({
+    ...(operation === 'deadline' || operation === 'start' || operation === 'resolve' ? { queue: 'work' } : {}),
+    ...(rowCount ? { saved: '1' } : { error: 'conflict' }),
+  }));
 }
