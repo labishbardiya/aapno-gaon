@@ -86,3 +86,13 @@ where user_id = 'REPLACE_WITH_STAFF_UID'::uuid;
 ```
 
 Sign in at `/staff`, then open `/admin` to edit routing rules, transfer reports, and see recent activity. Routing changes apply to new reports. Use the transfer control for existing reports.
+
+## Open311 public data
+
+The read-only GeoReport v2 JSON adapter exposes:
+
+- `GET /open311/v2/services.json` for civic categories.
+- `GET /open311/v2/requests.json` for up to 100 approved reports. Filter by `service_code`, `status` (open or closed), or an ISO 8601 date range up to 90 days. Without dates, the list defaults to the last 90 days. Use `service_request_id` for a direct lookup.
+- `GET /open311/v2/requests/<ticket>.json` for one approved report.
+
+Resolved reports map to closed. Other published reports map to open. Responses contain the public description and ward. Use the report form to submit issues.
