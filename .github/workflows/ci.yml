@@ -41,7 +41,7 @@ jobs:
           for attempt in {1..20}; do
             if curl -fsS http://localhost:3000/api/health > /tmp/mysociety-health.json; then
               jq -e '.status == "ok" and .service == "mysociety"' /tmp/mysociety-health.json
-              curl -fsS http://localhost:3000/ | grep -o 'mySociety' > /dev/null
+              curl -fsS http://localhost:3000/ | grep -F 'AAPNO GAON' > /dev/null
               exit 0
             fi
             sleep 2

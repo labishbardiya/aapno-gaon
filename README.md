@@ -2,7 +2,13 @@
 
 AAPNO GAON lets residents report local problems and track their report status.
 
-[Live application on Vercel](https://mysociety-story.vercel.app) · [GitHub Actions](https://github.com/labishbardiya/mySociety/actions)
+[Live application on Vercel](https://aapno-gaon.vercel.app) · [GitHub Actions](https://github.com/labishbardiya/aapno-gaon/actions)
+
+### Video walkthrough
+
+[![Watch the AAPNO GAON walkthrough](docs/media/walkthrough-preview.jpg)](docs/media/aapno-gaon-walkthrough.mp4)
+
+[Open the walkthrough video (MP4)](docs/media/aapno-gaon-walkthrough.mp4)
 
 ## Application pages
 
