@@ -10,7 +10,10 @@ const PinMap = dynamic(() => import('./pin-map'), { ssr: false });
 type Pin = { latitude: number; longitude: number; accuracyM?: number; source: 'device' | 'manual' };
 type Receipt = { ticketCode: string; receiptUrl: string };
 
-export default function ReportForm({ wards }: { wards: { id: number; name: string; coverage_hint: string | null }[] }) {
+export default function ReportForm({ wards, places }: { places: { name: string; latitude: number; longitude: number }[]; wards: { id: number; name: string; coverage_hint: string | null }[] }) {
+  const [photo, setPhoto] = useState('');
+  const [readingPhoto, setReadingPhoto] = useState(false);
+  const [place, setPlace] = useState('');
   const [description, setDescription] = useState('');
   const [ward, setWard] = useState('');
   const [category, setCategory] = useState('');
@@ -107,7 +110,7 @@ export default function ReportForm({ wards }: { wards: { id: number; name: strin
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (pending) return;
+    if (pending || readingPhoto) return;
     if (pin && !confirmed) {
       setError('Confirm or remove the pin before submitting.');
       return;
@@ -116,6 +119,7 @@ export default function ReportForm({ wards }: { wards: { id: number; name: strin
     const body = JSON.stringify({
       wardId: Number(data.get('ward')), category: data.get('category'),
       landmark: String(data.get('landmark')).trim(), description: String(data.get('description')).trim(), location: confirmed ? pin : null,
+      photo: photo.split(',')[1] || undefined,
       callbackName: String(data.get('callbackName')).trim() || undefined,
       callbackPhone: String(data.get('callbackPhone')).trim() || undefined,
     });
@@ -157,6 +161,17 @@ export default function ReportForm({ wards }: { wards: { id: number; name: strin
       <fieldset><legend>Issue location (optional)</legend>
         <button type="button" onClick={locate} disabled={locating || pending}>{locating ? 'Finding location…' : 'Use my current location'}</button>
         <p>Tap the map or drag the pin to mark where the issue is. You can also report using just the ward and landmark.</p>
+        {places.length > 0 && <label>Search local places<input list="local-places" value={place} onChange={event => {
+          setPlace(event.target.value);
+          const match = places.find(item => item.name === event.target.value);
+          if (match) {
+            moved.current = true;
+            setPin({ latitude: match.latitude, longitude: match.longitude, source: 'manual' });
+            setConfirmed(false);
+            setLocationMessage('');
+          }
+        }} /></label>}
+        <datalist id="local-places">{places.map(item => <option key={item.name} value={item.name} />)}</datalist>
         <PinMap center={pin} deviceCenter={deviceCenter} onChange={point => {
           moved.current = true;
           setPin({ ...point, source: 'manual' });
@@ -169,6 +184,34 @@ export default function ReportForm({ wards }: { wards: { id: number; name: strin
           {!confirmed && <button type="button" onClick={() => setConfirmed(true)}>Confirm issue location</button>}
           <button type="button" onClick={() => { setPin(null); setConfirmed(false); setLocationMessage(''); }}>Remove location</button>
         </>}
+      </fieldset>
+      <fieldset><legend>Issue photo (optional)</legend>
+        <label>Choose a photo<input type="file" disabled={readingPhoto || pending} accept="image/*" onChange={async event => {
+          const input = event.currentTarget;
+          const file = input.files?.[0];
+          if (!file) return;
+          setReadingPhoto(true);
+          setError('');
+          try {
+            if (file.size > 20 * 1024 * 1024) throw new Error();
+            const bitmap = await createImageBitmap(file);
+            const scale = Math.min(1, 900 / Math.max(bitmap.width, bitmap.height));
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+            canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+            try {
+              const context = canvas.getContext('2d');
+              if (!context) throw new Error();
+              context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+            } finally { bitmap.close(); }
+            const preview = canvas.toDataURL('image/jpeg', 0.72);
+            if (preview.length > 430000) throw new Error();
+            setPhoto(preview);
+          } catch { setError('Could not prepare that photo. Choose a smaller image.'); }
+          finally { input.value = ''; setReadingPhoto(false); }
+        }} /></label>
+        {photo && <><img src={photo} alt="Selected issue photo" style={{ maxWidth: '100%', maxHeight: 240 }} />
+          <button type="button" disabled={readingPhoto || pending} onClick={() => setPhoto('')}>Remove photo</button></>}
       </fieldset>
       {nearby.length > 0 && <fieldset>
         <legend>Similar open reports in this ward</legend>
@@ -184,7 +227,7 @@ export default function ReportForm({ wards }: { wards: { id: number; name: strin
         <label>Phone<input name="callbackPhone" type="tel" pattern="[+]?[0-9]{10,15}" autoComplete="tel" /></label>
       </fieldset>
       {error && <p role="alert">{error}</p>}
-      <button disabled={pending || locating}>{pending ? 'Submitting…' : 'Submit report'}</button>
+      <button disabled={pending || locating || readingPhoto}>{pending ? 'Submitting…' : 'Submit report'}</button>
     </form>
   );
 }

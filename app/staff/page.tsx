@@ -5,6 +5,7 @@ import { signIn, signOut, updateReport } from './actions';
 export const dynamic = 'force-dynamic';
 
 type Report = {
+  has_photo: boolean;
   id: string; version: number; ticket_code: string; ward: string; landmark: string;
   description: string; category: string; status: string; visibility: string;
   callback_name: string | null; callback_phone: string | null;
@@ -27,8 +28,12 @@ export default async function StaffPage({ searchParams }: {
 
   const filter = queue === 'work' || queue === 'closed' ? queue : 'review';
   const offset = /^\d{1,5}$/.test(page ?? '') ? Number(page) * 30 : 0;
+  const { rows: [schema] } = await readPool().query<{ photos: string | null }>(
+    "select to_regclass('mysociety.report_photos')::text as photos",
+  );
   const { rows } = await readPool().query<Report>(
     `select r.id, r.version, r.ticket_code, w.name as ward, r.landmark, r.description,
+       ${schema.photos ? "exists (select 1 from mysociety.report_photos where report_id = r.id)" : "false"} as has_photo,
        r.category, r.status, r.visibility, r.latitude, r.longitude, r.due_on::text,
        r.assigned_staff_id = $3 as assigned_to_me,
        case when r.assigned_staff_id = $3 then r.callback_name end as callback_name,
@@ -59,6 +64,7 @@ export default async function StaffPage({ searchParams }: {
         <p>{report.assigned_to_me ? 'Assigned to you' : 'Unassigned'}</p>
         {report.due_on && <p>Due: {report.due_on}{report.overdue ? ' · Overdue' : ''}</p>}
         {report.callback_phone && <p>Private callback: {report.callback_name} <a href={`tel:${report.callback_phone}`}>{report.callback_phone}</a></p>}
+        {report.has_photo && <p><a href={`/api/staff/reports/${report.id}/photo`}>View issue photo</a></p>}
         <p>{report.landmark}</p><p>{report.description}</p>
         {report.latitude !== null && <p>Issue location: {report.latitude}, {report.longitude}</p>}
         {report.resolution_note && <p>Resolution: {report.resolution_note}</p>}

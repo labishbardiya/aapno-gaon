@@ -8,7 +8,7 @@ function sha256(value: string) {
   return createHash('sha256').update(value).digest('hex');
 }
 
-export async function createReport(key: string, input: ReportInput, identity: { reporter: string; network: string }) {
+export async function createReport(key: string, input: ReportInput, identity: { reporter: string; network: string }, image?: Buffer, originalPhoto?: string) {
   const connectionString = process.env.DATABASE_URL;
   const secret = process.env.RECEIPT_SECRET;
   if (!connectionString || !secret || Buffer.byteLength(secret) < 32) {
@@ -23,6 +23,7 @@ export async function createReport(key: string, input: ReportInput, identity: { 
     description: input.description,
     ...(input.callbackName && { callbackName: input.callbackName }),
     ...(input.callbackPhone && { callbackPhone: input.callbackPhone }),
+    ...(originalPhoto && { photoHash: sha256(originalPhoto) }),
     location: location && { ...location, accuracyM: location.accuracyM ?? null },
   }));
   pool ??= new Pool({ connectionString, max: 3, connectionTimeoutMillis: 3000 });
@@ -78,6 +79,9 @@ export async function createReport(key: string, input: ReportInput, identity: { 
         return { kind: 'invalidWard' } as const;
       }
 
+      if (image) {
+        await client.query('insert into mysociety.report_photos (report_id, image) values ($1, $2)', [report.id, image]);
+      }
       await client.query(
         `insert into mysociety.report_events (report_id, event_type, new_status)
          values ($1, 'REPORT_CREATED', 'SUBMITTED')`, [report.id],
