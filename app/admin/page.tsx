@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { getAdmin } from '../../lib/staff-auth';
 import { getWards, readPool } from '../../lib/report-store';
 import { categories, categoryLabel } from '../../lib/report-categories';
-import { saveRule, transferReport } from './actions';
+import { saveRule, transferReport, reviewCommunity, publishDirectory } from './actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,6 +30,14 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
         from mysociety.routing_audit a join mysociety.wards w on w.id = a.ward_id
       ) history order by happened desc limit 30`),
   ]);
+  const community = await db.query<{ id: string; kind: string; ward: string; detail: string; phone: string; blood_group: string | null }>(
+    `select r.id, r.kind, w.name as ward, r.detail, r.phone, r.blood_group
+     from mysociety.community_requests r join mysociety.wards w on w.id = r.ward_id
+     where r.reviewed_at is null order by r.created_at limit 30`,
+  ).catch((error: { code?: string }) => {
+    if (error.code === "42P01") return { rows: [] };
+    throw error;
+  });
   const staffOptions = staff.map(member => <option key={member.user_id} value={member.user_id}>{member.user_id}</option>);
   return <main className="content">
     <nav className="home-links"><a href="/staff">Staff queue</a><a href="/overview?scope=staff">Internal overview</a></nav>
@@ -56,6 +64,20 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
         </select></label><button>Transfer report</button>
       </form>}
     </li>)}</ul>
+    <h2>Community submissions</h2>
+    {!community.rows.length && <p>No submissions awaiting review.</p>}
+    <ul className="register-list">{community.rows.map(item => <li key={item.id}>
+      <strong>{item.kind} · {item.ward}{item.blood_group && ' · ' + item.blood_group}</strong>
+      <p>{item.detail}</p><p><a href={`tel:${item.phone}`}>{item.phone}</a></p>
+      <form action={reviewCommunity}><input type="hidden" name="id" value={item.id} /><button>{item.kind === 'lost' || item.kind === 'found' ? 'Approve and publish listing' : 'Mark reviewed'}</button></form>
+    </li>)}</ul>
+    <h2>Publish a directory entry</h2>
+    <form className="report-form" action={publishDirectory}>
+      <label>Section<select name="section"><option value="notice">Notice</option><option value="guide">Guide</option><option value="contact">Contact</option></select></label>
+      <label>Title<input name="title" maxLength={120} required /></label>
+      <label>Details<textarea name="detail" maxLength={2000} required /></label>
+      <button>Publish entry</button>
+    </form>
     <h2>Recent activity</h2>
     <ul className="register-list">{audit.map((event, index) => <li key={index}>{event.label.replaceAll('_', ' ').toLowerCase()} · {event.detail} · {new Date(event.happened).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</li>)}</ul>
   </main>;

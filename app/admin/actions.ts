@@ -53,3 +53,35 @@ export async function transferReport(form: FormData) {
   `, [id, staff, version, admin]);
   redirect(result.rowCount ? '/admin?saved=1' : '/admin?error=1');
 }
+
+export async function reviewCommunity(form: FormData) {
+  const admin = await getAdmin();
+  if (!admin) redirect('/staff');
+  const id = z.uuid().safeParse(form.get('id'));
+  if (!id.success) redirect('/admin?error=1');
+  const result = await readPool().query(
+    `update mysociety.community_requests set reviewed_at = now()
+     where id = $1 and reviewed_at is null
+       and exists (select 1 from mysociety.staff_members where user_id = $2 and is_admin)`,
+    [id.data, admin],
+  );
+  redirect(result.rowCount ? '/admin?saved=1' : '/admin?error=1');
+}
+
+export async function publishDirectory(form: FormData) {
+  const admin = await getAdmin();
+  if (!admin) redirect('/staff');
+  const input = z.object({
+    section: z.enum(['notice', 'guide', 'contact']),
+    title: z.string().trim().min(1).max(120),
+    detail: z.string().trim().min(1).max(2000),
+  }).safeParse({ section: form.get('section'), title: form.get('title'), detail: form.get('detail') });
+  if (!input.success) redirect('/admin?error=1');
+  const { section, title, detail } = input.data;
+  const result = await readPool().query(
+    `insert into mysociety.community_directory (section, title, detail, published)
+     select $1, $2, $3, true from mysociety.staff_members where user_id = $4 and is_admin`,
+    [section, title, detail, admin],
+  ).catch(() => null);
+  redirect(result?.rowCount ? '/admin?saved=1' : '/admin?error=1');
+}
