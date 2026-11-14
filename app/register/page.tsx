@@ -1,3 +1,4 @@
+import { categories, categoryLabel } from '../../lib/report-categories';
 import { getPublicReports, getWards } from '../../lib/report-store';
 
 export const dynamic = 'force-dynamic';
@@ -22,8 +23,8 @@ export default async function Register({ searchParams }: { searchParams: Promise
       <label>Ward<select name="ward" defaultValue={ward}><option value="">All wards</option>
         {wards.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
       <label>Category<select name="category" defaultValue={category}><option value="">All categories</option>
-        {['Water', 'Roads', 'Waste', 'Drainage', 'Streetlights', 'Other'].map(item =>
-          <option key={item} value={item.toLowerCase()}>{item}</option>)}</select></label>
+        {categories.map(item =>
+          <option key={item} value={item}>{categoryLabel(item)}</option>)}</select></label>
       <label>Status<select name="status" defaultValue={status}><option value="">All statuses</option>
         {Object.entries(statuses).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
       <button>Apply filters</button>

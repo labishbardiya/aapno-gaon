@@ -7,6 +7,7 @@ export const dynamic = 'force-dynamic';
 type Report = {
   id: string; version: number; ticket_code: string; ward: string; landmark: string;
   description: string; category: string; status: string; visibility: string;
+  callback_name: string | null; callback_phone: string | null;
   latitude: number | null; longitude: number | null; resolution_note: string | null; due_on: string | null; overdue: boolean; assigned_to_me: boolean | null;
 };
 
@@ -30,6 +31,8 @@ export default async function StaffPage({ searchParams }: {
     `select r.id, r.version, r.ticket_code, w.name as ward, r.landmark, r.description,
        r.category, r.status, r.visibility, r.latitude, r.longitude, r.due_on::text,
        r.assigned_staff_id = $3 as assigned_to_me,
+       case when r.assigned_staff_id = $3 then r.callback_name end as callback_name,
+       case when r.assigned_staff_id = $3 then r.callback_phone end as callback_phone,
        r.status <> 'RESOLVED' and r.due_on < (now() at time zone 'Asia/Kolkata')::date as overdue,
        (select note from mysociety.report_events e where e.report_id = r.id and e.event_type = 'RESOLVE'
         order by e.id desc limit 1) as resolution_note
@@ -55,6 +58,7 @@ export default async function StaffPage({ searchParams }: {
         <summary><strong>{report.ticket_code}</strong> · {report.ward} · {report.category} · {report.visibility === 'REJECTED' ? 'Rejected' : report.status.replaceAll('_', ' ').toLowerCase()}</summary>
         <p>{report.assigned_to_me ? 'Assigned to you' : 'Unassigned'}</p>
         {report.due_on && <p>Due: {report.due_on}{report.overdue ? ' · Overdue' : ''}</p>}
+        {report.callback_phone && <p>Private callback: {report.callback_name} <a href={`tel:${report.callback_phone}`}>{report.callback_phone}</a></p>}
         <p>{report.landmark}</p><p>{report.description}</p>
         {report.latitude !== null && <p>Issue location: {report.latitude}, {report.longitude}</p>}
         {report.resolution_note && <p>Resolution: {report.resolution_note}</p>}

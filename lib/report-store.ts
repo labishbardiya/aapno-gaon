@@ -8,7 +8,7 @@ function sha256(value: string) {
   return createHash('sha256').update(value).digest('hex');
 }
 
-export async function createReport(key: string, input: ReportInput) {
+export async function createReport(key: string, input: ReportInput, identity: { reporter: string; network: string }) {
   const connectionString = process.env.DATABASE_URL;
   const secret = process.env.RECEIPT_SECRET;
   if (!connectionString || !secret || Buffer.byteLength(secret) < 32) {
@@ -21,6 +21,8 @@ export async function createReport(key: string, input: ReportInput) {
     category: input.category,
     landmark: input.landmark,
     description: input.description,
+    ...(input.callbackName && { callbackName: input.callbackName }),
+    ...(input.callbackPhone && { callbackPhone: input.callbackPhone }),
     location: location && { ...location, accuracyM: location.accuracyM ?? null },
   }));
   pool ??= new Pool({ connectionString, max: 3, connectionTimeoutMillis: 3000 });
@@ -45,15 +47,30 @@ export async function createReport(key: string, input: ReportInput) {
     const token = createHmac('sha256', secret).update(`receipt:${key}:${ticketCode}`).digest('base64url');
 
     if (!previous) {
+      const buckets = identity.reporter === identity.network ? [[identity.network, 3]] :
+        [[identity.network, 30], [identity.reporter, 3]];
+      for (const [bucket, limit] of buckets) {
+        const used = await client.query(
+          `insert into mysociety.daily_intake (reporter_key, day, submissions)
+           values ($1, (now() at time zone 'Asia/Kolkata')::date, 1)
+           on conflict (reporter_key, day) do update set submissions = daily_intake.submissions + 1
+           where daily_intake.submissions < $2`, [bucket, limit],
+        );
+        if (!used.rowCount) {
+          await client.query('rollback');
+          return { kind: 'limited' } as const;
+        }
+      }
+
       const inserted = await client.query<{ id: string }>(
         `insert into mysociety.reports
            (ticket_code, receipt_token_hash, ward_id, category, landmark, description,
-            latitude, longitude, accuracy_m, pin_source)
-         select $1, $2, id, $4, $5, $6, $7, $8, $9, $10
+            latitude, longitude, accuracy_m, pin_source, callback_name, callback_phone)
+         select $1, $2, id, $4, $5, $6, $7, $8, $9, $10, $11, $12
          from mysociety.wards where id = $3 and active for share
          returning id`,
         [ticketCode, sha256(token), input.wardId, input.category, input.landmark, input.description,
-          location?.latitude, location?.longitude, location?.accuracyM, location?.source],
+          location?.latitude, location?.longitude, location?.accuracyM, location?.source, input.callbackName, input.callbackPhone],
       );
       const report = inserted.rows[0];
       if (!report) {
@@ -104,8 +121,8 @@ export function readPool() {
 }
 
 export async function getWards() {
-  const { rows } = await readPool().query<{ id: number; name: string }>(
-    'select id, name from mysociety.wards where active order by id',
+  const { rows } = await readPool().query<{ id: number; name: string; coverage_hint: string | null }>(
+    'select id, name, coverage_hint from mysociety.wards where active order by id',
   );
   return rows;
 }

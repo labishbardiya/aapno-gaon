@@ -1,5 +1,7 @@
 'use client';
 
+import { categories, categoryLabel } from '../../lib/report-categories';
+import Dictation from './dictation';
 import dynamic from 'next/dynamic';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 
@@ -8,7 +10,12 @@ const PinMap = dynamic(() => import('./pin-map'), { ssr: false });
 type Pin = { latitude: number; longitude: number; accuracyM?: number; source: 'device' | 'manual' };
 type Receipt = { ticketCode: string; receiptUrl: string };
 
-export default function ReportForm({ wards }: { wards: { id: number; name: string }[] }) {
+export default function ReportForm({ wards }: { wards: { id: number; name: string; coverage_hint: string | null }[] }) {
+  const [description, setDescription] = useState('');
+  const [ward, setWard] = useState('');
+  const [category, setCategory] = useState('');
+  const [nearby, setNearby] = useState<{ ticket_code: string; summary: string; supporters: number }[]>([]);
+  const [supported, setSupported] = useState<string[]>([]);
   const retry = useRef<{ body: string; key: string } | null>(null);
   const [pin, setPin] = useState<Pin | null>(null);
   const [deviceCenter, setDeviceCenter] = useState<Pin | null>(null);
@@ -35,6 +42,47 @@ export default function ReportForm({ wards }: { wards: { id: number; name: strin
     }
     return () => { active = false; };
   }, []);
+
+  useEffect(() => {
+    if (!ward || !category) return;
+    const params = new URLSearchParams({ ward, category });
+    if (pin && confirmed) {
+      params.set('lat', String(pin.latitude));
+      params.set('lng', String(pin.longitude));
+    }
+    const controller = new AbortController();
+    fetch('/api/reports/nearby?' + params, { signal: controller.signal })
+      .then(async response => {
+        if (response.ok && !controller.signal.aborted) {
+          const data = await response.json();
+          if (!controller.signal.aborted) setNearby(data.reports);
+        }
+      }).catch(() => {});
+    return () => controller.abort();
+  }, [ward, category, pin, confirmed]);
+
+  function deviceId() {
+    try {
+    let device = localStorage.getItem('mysociety-reporter');
+    if (!device) {
+      device = crypto.randomUUID();
+      localStorage.setItem('mysociety-reporter', device);
+    }
+    return device;
+    } catch { return ''; }
+  }
+
+  async function support(ticket: string) {
+    try {
+      const response = await fetch('/api/reports/nearby?ticket=' + encodeURIComponent(ticket), {
+        method: 'POST', headers: { 'X-Reporter-Device': deviceId() },
+      });
+      if (!response.ok) throw new Error();
+      setSupported(previous => [...previous, ticket]);
+    } catch {
+      setError('Could not record your support. Try again or submit your own report.');
+    }
+  }
 
   function locate() {
     moved.current = true;
@@ -68,6 +116,8 @@ export default function ReportForm({ wards }: { wards: { id: number; name: strin
     const body = JSON.stringify({
       wardId: Number(data.get('ward')), category: data.get('category'),
       landmark: String(data.get('landmark')).trim(), description: String(data.get('description')).trim(), location: confirmed ? pin : null,
+      callbackName: String(data.get('callbackName')).trim() || undefined,
+      callbackPhone: String(data.get('callbackPhone')).trim() || undefined,
     });
     if (retry.current?.body !== body) retry.current = { body, key: crypto.randomUUID() };
     setPending(true);
@@ -75,10 +125,10 @@ export default function ReportForm({ wards }: { wards: { id: number; name: strin
     try {
       const response = await fetch('/api/reports', {
         method: 'POST', body,
-        headers: { 'Content-Type': 'application/json', 'Idempotency-Key': retry.current.key },
+        headers: { 'Content-Type': 'application/json', 'Idempotency-Key': retry.current.key, 'X-Reporter-Device': deviceId() },
       });
       if (!response.ok) {
-        setError(response.status === 422 ? 'Check the ward and the report details.' : 'Could not submit. Please try again.');
+        setError(response.status === 429 ? 'You can file up to three reports per day. Try again tomorrow.' : response.status === 422 ? 'Check the ward and the report details.' : 'Could not submit. Please try again.');
         return;
       }
       setReceipt(await response.json());
@@ -95,13 +145,15 @@ export default function ReportForm({ wards }: { wards: { id: number; name: strin
   return (
     <form className="report-form" onSubmit={submit}>
       <p>Staff review reports before publication. Leave personal details out of the description.</p>
-      <label>Ward<select name="ward" required defaultValue=""><option value="" disabled>Select a ward</option>
+      <label>Ward<select name="ward" required value={ward} onChange={event => { setWard(event.target.value); setNearby([]); }}><option value="" disabled>Select a ward</option>
         {wards.map(ward => <option key={ward.id} value={ward.id}>{ward.name}</option>)}</select></label>
-      <label>Category<select name="category" required defaultValue=""><option value="" disabled>Select a category</option>
-        {['Water', 'Roads', 'Waste', 'Drainage', 'Streetlights', 'Other'].map(category =>
-          <option key={category} value={category.toLowerCase()}>{category}</option>)}</select></label>
+      {wards.find(item => String(item.id) === ward)?.coverage_hint && <p>{wards.find(item => String(item.id) === ward)?.coverage_hint}</p>}
+      <label>Category<select name="category" required value={category} onChange={event => { setCategory(event.target.value); setNearby([]); }}><option value="" disabled>Select a category</option>
+        {categories.map(category =>
+          <option key={category} value={category}>{categoryLabel(category)}</option>)}</select></label>
       <label>Nearby landmark<input name="landmark" maxLength={200} required /></label>
-      <label>Describe the issue<textarea name="description" rows={5} maxLength={2000} required /></label>
+      <label>Describe the issue<textarea name="description" value={description} onChange={event => setDescription(event.target.value)} rows={5} maxLength={2000} required /></label>
+      <Dictation append={phrase => setDescription(previous => (previous + " " + phrase).trimStart().slice(0, 2000))} />
       <fieldset><legend>Issue location (optional)</legend>
         <button type="button" onClick={locate} disabled={locating || pending}>{locating ? 'Finding location…' : 'Use my current location'}</button>
         <p>Tap the map or drag the pin to mark where the issue is. You can also report using just the ward and landmark.</p>
@@ -117,6 +169,19 @@ export default function ReportForm({ wards }: { wards: { id: number; name: strin
           {!confirmed && <button type="button" onClick={() => setConfirmed(true)}>Confirm issue location</button>}
           <button type="button" onClick={() => { setPin(null); setConfirmed(false); setLocationMessage(''); }}>Remove location</button>
         </>}
+      </fieldset>
+      {nearby.length > 0 && <fieldset>
+        <legend>Similar open reports in this ward</legend>
+        {nearby.map(report => <div key={report.ticket_code}>
+          <p>{report.ticket_code} · {report.summary} · {report.supporters} supporting</p>
+          <button type="button" disabled={supported.includes(report.ticket_code)} onClick={() => support(report.ticket_code)}>
+            {supported.includes(report.ticket_code) ? 'Support recorded' : 'I have the same problem'}
+          </button>
+        </div>)}
+      </fieldset>}
+      <fieldset className="report-form"><legend>Private callback details (optional)</legend>
+        <label>Name<input name="callbackName" maxLength={100} autoComplete="name" /></label>
+        <label>Phone<input name="callbackPhone" type="tel" pattern="[+]?[0-9]{10,15}" autoComplete="tel" /></label>
       </fieldset>
       {error && <p role="alert">{error}</p>}
       <button disabled={pending || locating}>{pending ? 'Submitting…' : 'Submit report'}</button>

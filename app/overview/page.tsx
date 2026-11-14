@@ -1,3 +1,4 @@
+import { categories, categoryLabel } from '../../lib/report-categories';
 import { getStaff } from '../../lib/staff-auth';
 import { readPool } from '../../lib/report-store';
 import WardMap from './ward-map';
@@ -16,8 +17,7 @@ export default async function Overview({ searchParams }: {
   const internal = params.scope === 'staff' && Boolean(await getStaff().catch(() => null));
   const days = params.days === '7' || params.days === '90' ? Number(params.days) : 30;
   const metric = params.metric === 'received' || params.metric === 'rate' ? params.metric : 'pending';
-  const categories = ['water', 'roads', 'waste', 'drainage', 'streetlights', 'other'];
-  const category = categories.includes(params.category ?? '') ? params.category : '';
+  const category = categories.some(value => value === params.category) ? params.category : '';
   const result = await readPool().query<WardSummary>(
     `select w.name, w.center_latitude as latitude, w.center_longitude as longitude,
        count(r.id)::int as received,
@@ -38,7 +38,7 @@ export default async function Overview({ searchParams }: {
       <label>Period<select name="days" defaultValue={days}>{[7, 30, 90].map(value =>
         <option key={value} value={value}>Last {value} days</option>)}</select></label>
       <label>Category<select name="category" defaultValue={category}><option value="">All categories</option>
-        {categories.map(value => <option key={value} value={value}>{value}</option>)}</select></label>
+        {categories.map(value => <option key={value} value={value}>{categoryLabel(value)}</option>)}</select></label>
       <label>Map metric<select name="metric" defaultValue={metric}><option value="pending">Pending volume</option>
         <option value="received">Received volume</option><option value="rate">Resolution rate</option></select></label>
       <button>Apply filters</button>

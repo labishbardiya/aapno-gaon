@@ -2,6 +2,8 @@ import { z } from 'zod';
 import { reportInput } from '../../../lib/report-input';
 import { createReport } from '../../../lib/report-store';
 
+import { reporterKey } from '../../../lib/reporter';
+
 export const runtime = 'nodejs';
 
 function json(data: object, status: number) {
@@ -45,7 +47,8 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await createReport(key.data.toLowerCase(), input.data);
+    const result = await createReport(key.data.toLowerCase(), input.data, reporterKey(request));
+    if (result.kind === 'limited') return json({ error: 'DAILY_REPORT_LIMIT' }, 429);
     if (result.kind === 'conflict') return json({ error: 'IDEMPOTENCY_CONFLICT' }, 409);
     if (result.kind === 'invalidWard') return json({ error: 'INVALID_WARD' }, 422);
     return json(result.receipt, result.replayed ? 200 : 201);
