@@ -1,10 +1,11 @@
+import InstallMenu from './install-menu';
 import { Box, Container, Divider, Paper, Text, Title } from '@mantine/core';
 
 export default function Home() {
   return (
     <>
       <header className="site-header">
-        <Container size="lg"><a href="/">mySociety<span>.</span></a></Container>
+        <Container size="lg"><a href="/">mySociety<span>.</span></a><InstallMenu /></Container>
       </header>
       <main>
         <Container size="lg" className="landing">
@@ -20,7 +21,7 @@ export default function Home() {
               <li><strong>Follow the update.</strong> See when staff pick up and resolve the issue.</li>
             </ol>
             <Divider my="lg" />
-            <nav className="home-links" aria-label="Reports"><a href="/report">Report an issue</a><a href="/register">Browse reports</a><a href="/overview">Ward overview</a><a href="/staff">Staff sign-in</a></nav>
+            <nav className="home-links" aria-label="Reports"><a href="/report">Report an issue</a><a href="/register">Browse reports</a><a href="/overview">Ward overview</a><a href="/services">Community services</a><a href="/staff">Staff sign-in</a></nav>
           </Paper>
         </Container>
       </main>
