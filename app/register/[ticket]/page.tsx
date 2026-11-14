@@ -22,6 +22,15 @@ export default async function ReportDetail({ params }: { params: Promise<{ ticke
     where r.ticket_code = $1 and r.visibility = 'APPROVED'
   `, [ticket]);
   if (!report) notFound();
+  const db = readPool();
+  const { rows: [schema] } = await db.query<{ evidence: string | null }>(
+    "select to_regclass('mysociety.resolution_evidence')::text as evidence",
+  );
+  const evidence = report.status === 'RESOLVED' && schema.evidence ? (await db.query<{ has_before: boolean }>(
+    `select exists (select 1 from mysociety.report_photos where report_id = r.id) as has_before
+     from mysociety.reports r join mysociety.resolution_evidence e on e.report_id = r.id
+     where r.ticket_code = $1 and r.visibility = 'APPROVED' and r.status = 'RESOLVED'`, [ticket],
+  )).rows[0] : null;
   const labels: Record<string, string> = {
     REPORT_CREATED: 'Submitted', APPROVE: 'Published', START: 'Work started', FORWARDED: 'Forwarded',
     DEADLINE: 'Deadline updated', RESOLVE: 'Resolved',
@@ -31,6 +40,14 @@ export default async function ReportDetail({ params }: { params: Promise<{ ticke
     <p>{report.ticket_code} · {categoryLabel(report.status.toLowerCase().replaceAll('_', '-'))}</p>
     <p>{report.description}</p><p>{report.supporters} supporting</p>
     {report.due_on && <p>Expected completion: <time dateTime={report.due_on}>{report.due_on}</time></p>}
+    {evidence && <section><h2>Resolution evidence</h2>
+      <div className="home-links">
+        {(evidence.has_before ? ['before', 'after'] : ['after']).map(kind => <figure key={kind}>
+          <img src={`/api/reports/${ticket}/evidence/${kind}`} alt={kind === 'before' ? 'Issue before work' : 'Issue after work'} width={250} style={{ maxWidth: '100%', height: 'auto' }} />
+          <figcaption>{kind === 'before' ? 'Before' : 'After'}</figcaption>
+        </figure>)}
+      </div>
+    </section>}
     <h2>Updates</h2>
     <ol>{report.history.map((event, index) => <li key={index}><time dateTime={event.date}>{event.date}</time> · {labels[event.type]}
       {event.note && <p>{event.note}</p>}</li>)}</ol>

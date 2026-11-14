@@ -1,5 +1,7 @@
 'use server';
 
+import sharp from 'sharp';
+
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
@@ -44,7 +46,26 @@ export async function updateReport(form: FormData) {
     redirect('/staff?error=invalid');
   }
   const { id, version, operation, note, deadline } = input.data;
-  const { rowCount } = await readPool().query(
+  const photo = form.get('resolutionPhoto');
+  let evidence: Buffer | null = null;
+  if (operation === 'resolve' && photo instanceof File && photo.size) {
+    if (photo.size > 700000 || form.get('publishEvidence') !== 'on') redirect('/staff?queue=work&error=photo');
+    try {
+      const source = sharp(Buffer.from(await photo.arrayBuffer()), { limitInputPixels: 24000000 });
+      const { format } = await source.metadata();
+      if (format && ['jpeg', 'png', 'webp'].includes(format)) {
+        evidence = await source.rotate().resize({ width: 900, height: 900, fit: 'inside', withoutEnlargement: true })
+          .jpeg({ quality: 70 }).toBuffer();
+      }
+    } catch { evidence = null; }
+    if (!evidence || evidence.length > 350000) redirect('/staff?queue=work&error=photo');
+  }
+  const db = readPool();
+  const { rows: [schema] } = await db.query<{ evidence: string | null }>(
+    "select to_regclass('mysociety.resolution_evidence')::text as evidence",
+  );
+  if (evidence && !schema.evidence) redirect('/staff?queue=work&error=photo');
+  const { rowCount } = await db.query(
     `with eligible as (
        select id, status, visibility, due_on from mysociety.reports
        where id = $1 and version = $2
@@ -69,10 +90,13 @@ export async function updateReport(form: FormData) {
          version = r.version + 1, updated_at = now()
        from eligible e where r.id = e.id
        returning r.id, e.status as old_status, r.status, e.due_on as old_due_on, r.due_on
-     )
+     )${schema.evidence ? `, evidence_saved as (
+       insert into mysociety.resolution_evidence (report_id, image)
+       select id, $7::bytea from changed where $7::bytea is not null
+     )` : ''}
      insert into mysociety.report_events (report_id, actor_id, event_type, old_status, new_status, note)
      select id, $3, upper($4), old_status, status, case when $4 = 'resolve' then $5 when $4 = 'deadline' then coalesce(old_due_on::text, 'unset') || ' → ' || due_on::text end from changed`,
-    [id, version, staff, operation, note, deadline || null],
+    [id, version, staff, operation, note, deadline || null, ...(schema.evidence ? [evidence] : [])],
   );
   redirect('/staff?' + new URLSearchParams({
     ...(operation === 'deadline' || operation === 'start' || operation === 'resolve' ? { queue: 'work' } : {}),

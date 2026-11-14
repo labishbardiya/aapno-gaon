@@ -139,8 +139,12 @@ export async function getReceipt(token: string) {
   return rows[0];
 }
 
-export async function getPublicReports(q: string, ward: string, status: string, category: string, before?: string, sort = "recent") {
-  const { rows } = await readPool().query<{
+export async function getPublicReports(q: string, ward: string, status: string, category: string, before?: string, sort = "recent", view = "") {
+  const db = readPool();
+  const { rows: [schema] } = await db.query<{ evidence: string | null }>(
+    "select to_regclass('mysociety.resolution_evidence')::text as evidence",
+  );
+  const { rows } = await db.query<{
     ticket_code: string; ward: string; category: string; description: string; status: string; due_on: string | null; overdue: boolean; supporters: number;
   }>(
     `select r.ticket_code, w.name as ward, r.category, r.description, r.status, r.due_on::text,
@@ -152,10 +156,15 @@ export async function getPublicReports(q: string, ward: string, status: string, 
        and ($2 = '' or w.id::text = $2)
        and ($3 = '' or r.status = $3)
        and ($4 = '' or r.category = $4)
+       and case $7
+         when 'overdue' then r.status <> 'RESOLVED' and r.due_on < (now() at time zone 'Asia/Kolkata')::date
+         when 'forwarded' then exists (select 1 from mysociety.report_events where report_id = r.id and event_type = 'FORWARDED')
+         when 'evidence' then ${schema.evidence ? "r.status = 'RESOLVED' and exists (select 1 from mysociety.resolution_evidence where report_id = r.id)" : "false"}
+         else true end
        and ($5 = '' or (case when $6 = 'affected' then support.total else 0 end, r.created_at, r.id) < (
          select case when $6 = 'affected' then (select count(*) from mysociety.report_support where report_id = cursor_report.id) else 0 end, created_at, id from mysociety.reports cursor_report where ticket_code = $5 and visibility = 'APPROVED'
        ))
-     order by case when $6 = 'affected' then support.total else 0 end desc, r.created_at desc, r.id desc limit 51`, [q, ward, status, category, before ?? '', sort],
+     order by case when $6 = 'affected' then support.total else 0 end desc, r.created_at desc, r.id desc limit 51`, [q, ward, status, category, before ?? '', sort, view],
   );
   return rows;
 }

@@ -56,7 +56,7 @@ export default async function StaffPage({ searchParams }: {
     </nav>
     <form action={signOut}><button>Sign out</button></form>
     {saved && <p role="status">Report updated.</p>}
-    {error && <p role="alert">{error === 'conflict' ? 'The report changed. Review it again before updating.' : 'Check the resolution note and try again.'}</p>}
+    {error && <p role="alert">{error === 'photo' ? 'Use a JPEG, PNG, or WebP up to 700 KB and confirm publication.' : error === 'conflict' ? 'The report changed. Review it again before updating.' : 'Check the resolution note and try again.'}</p>}
     {!rows.length && <p>There are no reports in this queue.</p>}
     <ul className="register-list">{rows.slice(0, 30).map(report => <li key={report.id}>
       <details>
@@ -87,6 +87,8 @@ export default async function StaffPage({ searchParams }: {
             <button name="operation" value="reject">Reject</button>
           </div> : report.status === 'SUBMITTED' ? <button name="operation" value="start">Start work</button> :
             <><label>Public resolution note<textarea name="note" required maxLength={500} /></label>
+              <label>After photo (optional, up to 700 KB)<input name="resolutionPhoto" type="file" accept="image/jpeg,image/png,image/webp" /></label>
+              <label><span><input name="publishEvidence" type="checkbox" /> I reviewed the photos and approve public display of the after photo and any original photo.</span></label>
               <button name="operation" value="resolve">Mark resolved</button></>}
         </form>}
       </details>

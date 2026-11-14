@@ -11,15 +11,22 @@ export default async function Register({ searchParams }: { searchParams: Promise
   const q = field('q', 200);
   const ward = field('ward', 10);
   const status = field('status', 20);
+  const view = field('view', 12);
   const sort = field('sort', 10) === 'affected' ? 'affected' : 'recent';
   const category = field('category', 20);
-  const [wards, results] = await Promise.all([getWards(), getPublicReports(q, ward, status, category, field('before', 24), sort)]);
+  const [wards, results] = await Promise.all([getWards(), getPublicReports(q, ward, status, category, field('before', 24), sort, view)]);
   const reports = results.slice(0, 50);
   const next = reports.at(-1)?.ticket_code;
 
   return <main className="content">
     <a href="/">mySociety</a><h1>Public register</h1>
+    <nav className="home-links" aria-label="Quick report filters">
+      {Object.entries({ '': 'All reports', overdue: 'Overdue', forwarded: 'Forwarded', evidence: 'Photo evidence' })
+        .map(([key, label]) => <a key={key} aria-current={view === key ? 'page' : undefined}
+          href={`/register?${new URLSearchParams({ q, ward, category, sort, ...(key === 'evidence' || key === 'overdue' ? {} : { status }), view: key })}`}>{label}</a>)}
+    </nav>
     <form className="report-form">
+      <input type="hidden" name="view" value={view} />
       <label>Search<input name="q" defaultValue={q} placeholder="Keyword or ticket ID" /></label>
       <label>Ward<select name="ward" defaultValue={ward}><option value="">All wards</option>
         {wards.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
@@ -38,6 +45,6 @@ export default async function Register({ searchParams }: { searchParams: Promise
       <p>{report.supporters} supporting</p>
       <p>{report.category} — {report.description}</p>
     </li>)}</ul> : <p>No approved reports match these filters.</p>}
-    {results.length > 50 && next && <a href={`/register?${new URLSearchParams({ q, ward, status, category, sort, before: next })}`}>Next page</a>}
+    {results.length > 50 && next && <a href={`/register?${new URLSearchParams({ q, ward, status, category, sort, view, before: next })}`}>Next page</a>}
   </main>;
 }
