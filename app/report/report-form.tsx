@@ -138,7 +138,7 @@ export default function ReportForm({ wards, places, language }: { language: 'en'
       }
       setReceipt(await response.json());
     } catch {
-      setError('Could not reach mySociety. Please try again.');
+      setError('Could not reach AAPNO GAON. Please try again.');
     } finally {
       setPending(false);
     }

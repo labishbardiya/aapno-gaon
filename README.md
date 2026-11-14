@@ -1,6 +1,6 @@
-# mySociety
+# AAPNO GAON
 
-mySociety lets residents report local problems and track their report status.
+AAPNO GAON lets residents report local problems and track their report status.
 
 [Live application on Vercel](https://mysociety-story.vercel.app) · [GitHub Actions](https://github.com/labishbardiya/mySociety/actions)
 

@@ -34,7 +34,7 @@ export default async function Overview({ searchParams }: {
      group by w.id order by w.name`, [days, internal, category],
   ).catch(() => null);
 
-  return <main className="content"><a href="/">mySociety</a><h1>Ward overview</h1>
+  return <main id="main" className="content screen-overview"><h1>Ward overview</h1>
     <p>{internal ? 'Internal view' : 'Approved public reports'} · Last {days} days</p>
     <form className="report-form">
       {internal && <input type="hidden" name="scope" value="staff" />}

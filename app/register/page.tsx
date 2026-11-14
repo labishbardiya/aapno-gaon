@@ -20,8 +20,8 @@ export default async function Register({ searchParams }: { searchParams: Promise
   const reports = results.slice(0, 50);
   const next = reports.at(-1)?.ticket_code;
 
-  return <main className="content">
-    <a href="/">mySociety</a><h1>{hi ? 'सार्वजनिक रजिस्टर' : 'Public register'}</h1>
+  return <main id="main" className="content screen-register">
+    <h1>{hi ? 'सार्वजनिक रजिस्टर' : 'Public register'}</h1>
     <nav className="home-links" aria-label="Quick report filters">
       {Object.entries({ '': 'All reports', overdue: 'Overdue', forwarded: 'Forwarded', evidence: 'Photo evidence' })
         .map(([key, label]) => <a key={key} aria-current={view === key ? 'page' : undefined}

@@ -35,7 +35,7 @@ export default async function ReportDetail({ params }: { params: Promise<{ ticke
     REPORT_CREATED: 'Submitted', APPROVE: 'Published', START: 'Work started', FORWARDED: 'Forwarded',
     DEADLINE: 'Deadline updated', RESOLVE: 'Resolved',
   };
-  return <main className="content"><a href="/register">Public register</a>
+  return <main id="main" className="content screen-register"><a href="/register">Public register</a>
     <h1>{categoryLabel(report.category)} in {report.ward}</h1>
     <p>{report.ticket_code} · {categoryLabel(report.status.toLowerCase().replaceAll('_', '-'))}</p>
     <p>{report.description}</p><p>{report.supporters} supporting</p>

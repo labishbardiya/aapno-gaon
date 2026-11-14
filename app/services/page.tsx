@@ -27,25 +27,25 @@ export default async function ServicesPage({ searchParams }: {
     ['guide', t('Government service guides', 'सरकारी सेवा मार्गदर्शिका')],
     ['contact', t('Important numbers', 'ज़रूरी नंबर')],
   ];
-  return <main className="content" lang={hi ? 'hi' : 'en'}>
-    <nav className="home-links"><a href="/">mySociety</a><a href={hi ? '/services' : '/services?lang=hi'}>{hi ? 'English' : 'हिन्दी'}</a></nav>
+  return <main id="main" className="content screen-services" lang={hi ? 'hi' : 'en'}>
+    <nav className="home-links"><a href={hi ? '/services' : '/services?lang=hi'}>{hi ? 'English' : 'हिन्दी'}</a></nav>
     <h1>{t('Community services', 'सामुदायिक सेवाएँ')}</h1>
     <h2>{t('Ward directory', 'वार्ड निर्देशिका')}</h2>
     <ul>{wards.map(ward => <li key={ward.id}><a href={`/register?ward=${ward.id}`}>{ward.name}</a>{ward.coverage_hint && <p>{ward.coverage_hint}</p>}</li>)}</ul>
-    {sections.map(([section, title]) => <section key={section}>
+    {sections.map(([section, title]) => <section key={section} id={section}>
       <h2>{title}</h2>
       {section === 'contact' && <p><a href="tel:112">{t('Emergency assistance: 112', 'आपातकालीन सहायता: 112')}</a></p>}
       {directory.filter(item => item.section === section).map(item => <article key={item.id}><h3>{item.title}</h3><p>{item.detail}</p></article>)}
     </section>)}
     <h2>{t('Voter services', 'मतदाता सेवाएँ')}</h2>
     <p><a href="https://voters.eci.gov.in/">{t('Election Commission voter portal', 'निर्वाचन आयोग का मतदाता पोर्टल')}</a></p>
-    <h2>{t('Lost and found listings', 'खोया-पाया सूची')}</h2>
+    <h2 id="lost-found">{t('Lost and found listings', 'खोया-पाया सूची')}</h2>
     {!lostFound.length && <p>{t('No reviewed listings yet.', 'अभी कोई समीक्षा की गई सूची नहीं है।')}</p>}
     <ul className="register-list">{lostFound.map(item => <li key={item.id}>
       <strong>{item.kind === 'lost' ? t('Lost', 'खोया') : t('Found', 'मिला')} · {item.ward}</strong>
       <p>{item.detail}</p>
     </li>)}</ul>
-    <h2>{t('Lost and found or blood requests', 'खोया-पाया या रक्त अनुरोध')}</h2>
+    <h2 id="community-request">{t('Lost and found or blood requests', 'खोया-पाया या रक्त अनुरोध')}</h2>
     {params.saved && <p role="status">{t('Saved for staff review.', 'कर्मचारी समीक्षा के लिए अनुरोध सहेजा गया।')}</p>}
     {params.error && <p role="alert">{t('Check your details and try again.', 'जानकारी जाँचकर फिर कोशिश करें।')}</p>}
     <form className="report-form" action={submitCommunity}>

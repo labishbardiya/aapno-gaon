@@ -39,7 +39,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
     throw error;
   });
   const staffOptions = staff.map(member => <option key={member.user_id} value={member.user_id}>{member.user_id}</option>);
-  return <main className="content">
+  return <main id="main" className="content screen-admin">
     <nav className="home-links"><a href="/staff">Staff queue</a><a href="/overview?scope=staff">Internal overview</a></nav>
     <h1>Administration</h1>
     {params.saved && <p role="status">Change saved.</p>}

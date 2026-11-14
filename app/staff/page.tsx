@@ -19,7 +19,7 @@ export default async function StaffPage({ searchParams }: {
   const hi = await getLanguage() === 'hi';
   const { queue, error, saved, page } = await searchParams;
   const staff = await getStaff().catch(() => null);
-  if (!staff) return <main className="content"><a href="/">mySociety</a><h1>{hi ? 'कर्मचारी लॉगिन' : 'Staff sign-in'}</h1>
+  if (!staff) return <main id="main" className="content screen-staff"><h1>{hi ? 'कर्मचारी लॉगिन' : 'Staff sign-in'}</h1>
     {error && <p role="alert">Could not sign in. Check your account or contact the administrator.</p>}
     <form action={signIn} className="report-form">
       <label>{hi ? 'ईमेल' : 'Email'}<input name="email" type="email" autoComplete="username" required /></label>
@@ -49,7 +49,7 @@ export default async function StaffPage({ searchParams }: {
        else r.visibility = 'PENDING_REVIEW' end
      order by r.created_at, r.id limit 31 offset $2`, [filter, offset, staff],
   );
-  return <main className="content"><a href="/">mySociety</a><h1>{hi ? 'रिपोर्ट की समीक्षा करें' : 'Review submissions'}</h1>
+  return <main id="main" className="content screen-staff"><h1>{hi ? 'रिपोर्ट की समीक्षा करें' : 'Review submissions'}</h1>
     <nav className="home-links" aria-label="Staff views">
       <a href="/staff" aria-current={filter === 'review' ? 'page' : undefined}>{hi ? 'समीक्षा बाकी' : 'Awaiting review'}</a>
       <a href="/staff?queue=work" aria-current={filter === 'work' ? 'page' : undefined}>{hi ? 'सक्रिय रिपोर्ट' : 'Active reports'}</a>

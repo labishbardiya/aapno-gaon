@@ -14,7 +14,7 @@ export default async function TrackPage({ params }: { params: Promise<{ token: s
   const rejected = receipt.visibility === 'REJECTED';
   const current = receipt.status === 'RESOLVED' ? 3 : receipt.status === 'IN_PROGRESS' ? 2 :
     receipt.visibility === 'APPROVED' ? 1 : 0;
-  return <main className="content"><a href="/">mySociety</a><h1>{hi ? 'अपनी रिपोर्ट की स्थिति देखें' : 'Track your report'}</h1>
+  return <main id="main" className="content screen-track"><h1>{hi ? 'अपनी रिपोर्ट की स्थिति देखें' : 'Track your report'}</h1>
     <p>Ticket <strong>{receipt.ticket_code}</strong></p>
     <ol className="ticket-progress" aria-label="Report progress">
       {steps.map((step, index) => {
