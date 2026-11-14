@@ -74,3 +74,15 @@ on conflict (ward_id, category) do update set staff_id = excluded.staff_id;
 ```
 
 New reports use these rules at submission. Staff can claim unassigned reports from the queue. Once an assigned report is approved, its owner can publish a due date from Active reports. The date appears in private tracking and in the public register. An unresolved report becomes overdue on the following calendar day in India.
+
+### Administration
+
+After applying the administration migration, an authorized database operator can enable the admin dashboard for an existing staff user:
+
+```sql
+update mysociety.staff_members
+set is_admin = true
+where user_id = 'REPLACE_WITH_STAFF_UID'::uuid;
+```
+
+Sign in at `/staff`, then open `/admin` to edit routing rules, transfer reports, and see recent activity. Routing changes apply to new reports. Use the transfer control for existing reports.

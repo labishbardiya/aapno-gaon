@@ -29,3 +29,12 @@ export async function getStaff() {
   );
   return rowCount ? identity.data.id : null;
 }
+
+export async function getAdmin() {
+  const staff = await getStaff();
+  if (!staff) return null;
+  const result = await readPool().query(
+    'select 1 from mysociety.staff_members where user_id = $1 and is_admin', [staff],
+  );
+  return result.rowCount ? staff : null;
+}

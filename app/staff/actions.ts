@@ -64,6 +64,7 @@ export async function updateReport(form: FormData) {
          status = case $4 when 'start' then 'IN_PROGRESS' when 'resolve' then 'RESOLVED' else e.status end,
          visibility = case $4 when 'approve' then 'APPROVED' when 'reject' then 'REJECTED' else e.visibility end,
          assigned_staff_id = case when $4 = 'claim' then $3 else r.assigned_staff_id end,
+         resolved_at = case when $4 = 'resolve' then now() else r.resolved_at end,
          due_on = case when $4 = 'deadline' then $6::date else r.due_on end,
          version = r.version + 1, updated_at = now()
        from eligible e where r.id = e.id
