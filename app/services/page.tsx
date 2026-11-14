@@ -1,3 +1,4 @@
+import { getLanguage } from '../../lib/locale';
 import { getWards, readPool } from '../../lib/report-store';
 import { submitCommunity } from './actions';
 
@@ -7,7 +8,7 @@ export default async function ServicesPage({ searchParams }: {
   searchParams: Promise<{ lang?: string; saved?: string; error?: string }>;
 }) {
   const params = await searchParams;
-  const hi = params.lang === 'hi';
+  const hi = params.lang ? params.lang === 'hi' : await getLanguage() === 'hi';
   const t = (en: string, hindi: string) => hi ? hindi : en;
   const [wards, directory, lostFound] = await Promise.all([
     getWards().catch(() => []),

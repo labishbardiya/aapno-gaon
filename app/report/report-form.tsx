@@ -10,7 +10,8 @@ const PinMap = dynamic(() => import('./pin-map'), { ssr: false });
 type Pin = { latitude: number; longitude: number; accuracyM?: number; source: 'device' | 'manual' };
 type Receipt = { ticketCode: string; receiptUrl: string };
 
-export default function ReportForm({ wards, places }: { places: { name: string; latitude: number; longitude: number }[]; wards: { id: number; name: string; coverage_hint: string | null }[] }) {
+export default function ReportForm({ wards, places, language }: { language: 'en' | 'hi'; places: { name: string; latitude: number; longitude: number }[]; wards: { id: number; name: string; coverage_hint: string | null }[] }) {
+  const hi = language === 'hi';
   const [photo, setPhoto] = useState('');
   const [readingPhoto, setReadingPhoto] = useState(false);
   const [place, setPlace] = useState('');
@@ -143,25 +144,25 @@ export default function ReportForm({ wards, places }: { places: { name: string; 
     }
   }
 
-  if (receipt) return <section><h2>Report received</h2><p>Ticket <strong>{receipt.ticketCode}</strong></p>
-    <p>Save your private tracking link to check the status.</p><a href={receipt.receiptUrl}>Track your report</a></section>;
+  if (receipt) return <section><h2>{hi ? 'रिपोर्ट मिल गई' : 'Report received'}</h2><p>Ticket <strong>{receipt.ticketCode}</strong></p>
+    <p>Save your private tracking link to check the status.</p><a href={receipt.receiptUrl}>{hi ? 'अपनी रिपोर्ट की स्थिति देखें' : 'Track your report'}</a></section>;
 
   return (
     <form className="report-form" onSubmit={submit}>
       <p>Staff review reports before publication. Leave personal details out of the description.</p>
-      <label>Ward<select name="ward" required value={ward} onChange={event => { setWard(event.target.value); setNearby([]); }}><option value="" disabled>Select a ward</option>
+      <label>{hi ? 'वार्ड' : 'Ward'}<select name="ward" required value={ward} onChange={event => { setWard(event.target.value); setNearby([]); }}><option value="" disabled>{hi ? 'वार्ड चुनें' : 'Select a ward'}</option>
         {wards.map(ward => <option key={ward.id} value={ward.id}>{ward.name}</option>)}</select></label>
       {wards.find(item => String(item.id) === ward)?.coverage_hint && <p>{wards.find(item => String(item.id) === ward)?.coverage_hint}</p>}
-      <label>Category<select name="category" required value={category} onChange={event => { setCategory(event.target.value); setNearby([]); }}><option value="" disabled>Select a category</option>
+      <label>{hi ? 'श्रेणी' : 'Category'}<select name="category" required value={category} onChange={event => { setCategory(event.target.value); setNearby([]); }}><option value="" disabled>{hi ? 'श्रेणी चुनें' : 'Select a category'}</option>
         {categories.map(category =>
           <option key={category} value={category}>{categoryLabel(category)}</option>)}</select></label>
-      <label>Nearby landmark<input name="landmark" maxLength={200} required /></label>
-      <label>Describe the issue<textarea name="description" value={description} onChange={event => setDescription(event.target.value)} rows={5} maxLength={2000} required /></label>
+      <label>{hi ? 'पास का पहचान स्थल' : 'Nearby landmark'}<input name="landmark" maxLength={200} required /></label>
+      <label>{hi ? 'समस्या का विवरण' : 'Describe the issue'}<textarea name="description" value={description} onChange={event => setDescription(event.target.value)} rows={5} maxLength={2000} required /></label>
       <Dictation append={phrase => setDescription(previous => (previous + " " + phrase).trimStart().slice(0, 2000))} />
-      <fieldset><legend>Issue location (optional)</legend>
+      <fieldset><legend>{hi ? 'समस्या का स्थान (वैकल्पिक)' : 'Issue location (optional)'}</legend>
         <button type="button" onClick={locate} disabled={locating || pending}>{locating ? 'Finding location…' : 'Use my current location'}</button>
         <p>Tap the map or drag the pin to mark where the issue is. You can also report using just the ward and landmark.</p>
-        {places.length > 0 && <label>Search local places<input list="local-places" value={place} onChange={event => {
+        {places.length > 0 && <label>{hi ? 'स्थानीय जगह खोजें' : 'Search local places'}<input list="local-places" value={place} onChange={event => {
           setPlace(event.target.value);
           const match = places.find(item => item.name === event.target.value);
           if (match) {
@@ -181,12 +182,12 @@ export default function ReportForm({ wards, places }: { places: { name: string; 
         {locationMessage && <p role="status">{locationMessage}</p>}
         {pin && <>
           <p role="status">{confirmed ? 'Issue location confirmed.' : 'Confirm this pin to include it with your report.'}</p>
-          {!confirmed && <button type="button" onClick={() => setConfirmed(true)}>Confirm issue location</button>}
-          <button type="button" onClick={() => { setPin(null); setConfirmed(false); setLocationMessage(''); }}>Remove location</button>
+          {!confirmed && <button type="button" onClick={() => setConfirmed(true)}>{hi ? 'स्थान की पुष्टि करें' : 'Confirm issue location'}</button>}
+          <button type="button" onClick={() => { setPin(null); setConfirmed(false); setLocationMessage(''); }}>{hi ? 'स्थान हटाएँ' : 'Remove location'}</button>
         </>}
       </fieldset>
-      <fieldset><legend>Issue photo (optional)</legend>
-        <label>Choose a photo<input type="file" disabled={readingPhoto || pending} accept="image/*" onChange={async event => {
+      <fieldset><legend>{hi ? 'समस्या की फ़ोटो (वैकल्पिक)' : 'Issue photo (optional)'}</legend>
+        <label>{hi ? 'फ़ोटो चुनें' : 'Choose a photo'}<input type="file" disabled={readingPhoto || pending} accept="image/*" onChange={async event => {
           const input = event.currentTarget;
           const file = input.files?.[0];
           if (!file) return;
@@ -211,10 +212,10 @@ export default function ReportForm({ wards, places }: { places: { name: string; 
           finally { input.value = ''; setReadingPhoto(false); }
         }} /></label>
         {photo && <><img src={photo} alt="Selected issue photo" style={{ maxWidth: '100%', maxHeight: 240 }} />
-          <button type="button" disabled={readingPhoto || pending} onClick={() => setPhoto('')}>Remove photo</button></>}
+          <button type="button" disabled={readingPhoto || pending} onClick={() => setPhoto('')}>{hi ? 'फ़ोटो हटाएँ' : 'Remove photo'}</button></>}
       </fieldset>
       {nearby.length > 0 && <fieldset>
-        <legend>Similar open reports in this ward</legend>
+        <legend>{hi ? 'इस वार्ड की मिलती-जुलती खुली रिपोर्टें' : 'Similar open reports in this ward'}</legend>
         {nearby.map(report => <div key={report.ticket_code}>
           <p>{report.ticket_code} · {report.summary} · {report.supporters} supporting</p>
           <button type="button" disabled={supported.includes(report.ticket_code)} onClick={() => support(report.ticket_code)}>
@@ -222,12 +223,12 @@ export default function ReportForm({ wards, places }: { places: { name: string; 
           </button>
         </div>)}
       </fieldset>}
-      <fieldset className="report-form"><legend>Private callback details (optional)</legend>
-        <label>Name<input name="callbackName" maxLength={100} autoComplete="name" /></label>
-        <label>Phone<input name="callbackPhone" type="tel" pattern="[+]?[0-9]{10,15}" autoComplete="tel" /></label>
+      <fieldset className="report-form"><legend>{hi ? 'निजी संपर्क जानकारी (वैकल्पिक)' : 'Private callback details (optional)'}</legend>
+        <label>{hi ? 'नाम' : 'Name'}<input name="callbackName" maxLength={100} autoComplete="name" /></label>
+        <label>{hi ? 'फ़ोन' : 'Phone'}<input name="callbackPhone" type="tel" pattern="[+]?[0-9]{10,15}" autoComplete="tel" /></label>
       </fieldset>
       {error && <p role="alert">{error}</p>}
-      <button disabled={pending || locating || readingPhoto}>{pending ? 'Submitting…' : 'Submit report'}</button>
+      <button disabled={pending || locating || readingPhoto}>{pending ? hi ? 'भेज रहे हैं…' : 'Submitting…' : hi ? 'रिपोर्ट भेजें' : 'Submit report'}</button>
     </form>
   );
 }

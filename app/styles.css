@@ -36,3 +36,5 @@ body { background: #f3f4ec; color: #18362b; }
 .ticket-progress [data-state="complete"] span { background: #245738; color: white; border-color: #245738; }
 .ticket-progress [data-state="current"] { font-weight: 800; }
 .ticket-progress [data-state="current"] span { border-color: #245738; outline: 2px solid #245738; outline-offset: 2px; }
+
+.language-switch { display: block; margin: .5rem 1rem .5rem auto; padding: .35rem .65rem; border: 1px solid #789181; border-radius: .35rem; background: #fffdf6; color: #18362b; cursor: pointer; }

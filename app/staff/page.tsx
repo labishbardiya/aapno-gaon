@@ -1,3 +1,4 @@
+import { getLanguage } from '../../lib/locale';
 import { getStaff } from '../../lib/staff-auth';
 import { readPool } from '../../lib/report-store';
 import { signIn, signOut, updateReport } from './actions';
@@ -15,14 +16,15 @@ type Report = {
 export default async function StaffPage({ searchParams }: {
   searchParams: Promise<{ queue?: string; error?: string; saved?: string; page?: string }>;
 }) {
+  const hi = await getLanguage() === 'hi';
   const { queue, error, saved, page } = await searchParams;
   const staff = await getStaff().catch(() => null);
-  if (!staff) return <main className="content"><a href="/">mySociety</a><h1>Staff sign-in</h1>
+  if (!staff) return <main className="content"><a href="/">mySociety</a><h1>{hi ? 'कर्मचारी लॉगिन' : 'Staff sign-in'}</h1>
     {error && <p role="alert">Could not sign in. Check your account or contact the administrator.</p>}
     <form action={signIn} className="report-form">
-      <label>Email<input name="email" type="email" autoComplete="username" required /></label>
-      <label>Password<input name="password" type="password" autoComplete="current-password" required /></label>
-      <button>Sign in</button>
+      <label>{hi ? 'ईमेल' : 'Email'}<input name="email" type="email" autoComplete="username" required /></label>
+      <label>{hi ? 'पासवर्ड' : 'Password'}<input name="password" type="password" autoComplete="current-password" required /></label>
+      <button>{hi ? 'लॉगिन करें' : 'Sign in'}</button>
     </form>
   </main>;
 
@@ -47,17 +49,17 @@ export default async function StaffPage({ searchParams }: {
        else r.visibility = 'PENDING_REVIEW' end
      order by r.created_at, r.id limit 31 offset $2`, [filter, offset, staff],
   );
-  return <main className="content"><a href="/">mySociety</a><h1>Review submissions</h1>
+  return <main className="content"><a href="/">mySociety</a><h1>{hi ? 'रिपोर्ट की समीक्षा करें' : 'Review submissions'}</h1>
     <nav className="home-links" aria-label="Staff views">
-      <a href="/staff" aria-current={filter === 'review' ? 'page' : undefined}>Awaiting review</a>
-      <a href="/staff?queue=work" aria-current={filter === 'work' ? 'page' : undefined}>Active reports</a>
-      <a href="/staff?queue=closed" aria-current={filter === 'closed' ? 'page' : undefined}>Closed reports</a>
-      <a href="/overview?scope=staff">Internal overview</a>
+      <a href="/staff" aria-current={filter === 'review' ? 'page' : undefined}>{hi ? 'समीक्षा बाकी' : 'Awaiting review'}</a>
+      <a href="/staff?queue=work" aria-current={filter === 'work' ? 'page' : undefined}>{hi ? 'सक्रिय रिपोर्ट' : 'Active reports'}</a>
+      <a href="/staff?queue=closed" aria-current={filter === 'closed' ? 'page' : undefined}>{hi ? 'बंद रिपोर्ट' : 'Closed reports'}</a>
+      <a href="/overview?scope=staff">{hi ? 'आंतरिक सारांश' : 'Internal overview'}</a>
     </nav>
-    <form action={signOut}><button>Sign out</button></form>
-    {saved && <p role="status">Report updated.</p>}
+    <form action={signOut}><button>{hi ? 'लॉग आउट करें' : 'Sign out'}</button></form>
+    {saved && <p role="status">{hi ? 'रिपोर्ट अपडेट हुई।' : 'Report updated.'}</p>}
     {error && <p role="alert">{error === 'photo' ? 'Use a JPEG, PNG, or WebP up to 700 KB and confirm publication.' : error === 'conflict' ? 'The report changed. Review it again before updating.' : 'Check the resolution note and try again.'}</p>}
-    {!rows.length && <p>There are no reports in this queue.</p>}
+    {!rows.length && <p>{hi ? 'इस सूची में कोई रिपोर्ट नहीं है।' : 'There are no reports in this queue.'}</p>}
     <ul className="register-list">{rows.slice(0, 30).map(report => <li key={report.id}>
       <details>
         <summary><strong>{report.ticket_code}</strong> · {report.ward} · {report.category} · {report.visibility === 'REJECTED' ? 'Rejected' : report.status.replaceAll('_', ' ').toLowerCase()}</summary>
@@ -71,31 +73,31 @@ export default async function StaffPage({ searchParams }: {
         {filter !== 'closed' && !report.assigned_to_me && <form action={updateReport} className="report-form">
           <input type="hidden" name="id" value={report.id} />
           <input type="hidden" name="version" value={report.version} />
-          <button name="operation" value="claim">Assign to me</button>
+          <button name="operation" value="claim">{hi ? 'मुझे सौंपें' : 'Assign to me'}</button>
         </form>}
         {filter === 'work' && report.assigned_to_me && <form action={updateReport} className="report-form">
           <input type="hidden" name="id" value={report.id} />
           <input type="hidden" name="version" value={report.version} />
-          <label>Expected completion date<input type="date" name="deadline" defaultValue={report.due_on ?? ''} required /></label>
-          <button name="operation" value="deadline">Publish deadline</button>
+          <label>{hi ? 'अपेक्षित पूर्णता तिथि' : 'Expected completion date'}<input type="date" name="deadline" defaultValue={report.due_on ?? ''} required /></label>
+          <button name="operation" value="deadline">{hi ? 'समय सीमा प्रकाशित करें' : 'Publish deadline'}</button>
         </form>}
         {filter !== 'closed' && <form action={updateReport} className="report-form">
           <input type="hidden" name="id" value={report.id} />
           <input type="hidden" name="version" value={report.version} />
           {filter === 'review' ? <div className="home-links">
-            <button name="operation" value="approve">Approve for publication</button>
-            <button name="operation" value="reject">Reject</button>
-          </div> : report.status === 'SUBMITTED' ? <button name="operation" value="start">Start work</button> :
-            <><label>Public resolution note<textarea name="note" required maxLength={500} /></label>
+            <button name="operation" value="approve">{hi ? 'प्रकाशन की अनुमति दें' : 'Approve for publication'}</button>
+            <button name="operation" value="reject">{hi ? 'अस्वीकार करें' : 'Reject'}</button>
+          </div> : report.status === 'SUBMITTED' ? <button name="operation" value="start">{hi ? 'काम शुरू करें' : 'Start work'}</button> :
+            <><label>{hi ? 'समाधान का सार्वजनिक विवरण' : 'Public resolution note'}<textarea name="note" required maxLength={500} /></label>
               <label>After photo (optional, up to 700 KB)<input name="resolutionPhoto" type="file" accept="image/jpeg,image/png,image/webp" /></label>
               <label><span><input name="publishEvidence" type="checkbox" /> I reviewed the photos and approve public display of the after photo and any original photo.</span></label>
-              <button name="operation" value="resolve">Mark resolved</button></>}
+              <button name="operation" value="resolve">{hi ? 'समस्या हल हुई' : 'Mark resolved'}</button></>}
         </form>}
       </details>
     </li>)}</ul>
     <nav className="home-links" aria-label="Queue pages">
-      {offset > 0 && <a href={`/staff?queue=${filter}&page=${offset / 30 - 1}`}>Previous page</a>}
-      {rows.length > 30 && <a href={`/staff?queue=${filter}&page=${offset / 30 + 1}`}>Next page</a>}
+      {offset > 0 && <a href={`/staff?queue=${filter}&page=${offset / 30 - 1}`}>{hi ? 'पिछला पृष्ठ' : 'Previous page'}</a>}
+      {rows.length > 30 && <a href={`/staff?queue=${filter}&page=${offset / 30 + 1}`}>{hi ? 'अगला पृष्ठ' : 'Next page'}</a>}
     </nav>
   </main>;
 }
