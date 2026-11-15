@@ -6,9 +6,9 @@ AAPNO GAON lets residents report local problems and track their report status.
 
 ### Video walkthrough
 
-[![Watch the AAPNO GAON walkthrough](docs/media/walkthrough-preview.jpg)](docs/media/aapno-gaon-walkthrough.mp4)
+[![Watch the AAPNO GAON walkthrough](docs/media/walkthrough-preview.jpg)](https://aapno-gaon.vercel.app/walkthrough/index.html)
 
-[Open the walkthrough video (MP4)](docs/media/aapno-gaon-walkthrough.mp4)
+[Watch the walkthrough in your browser](https://aapno-gaon.vercel.app/walkthrough/index.html)
 
 ## Application pages
 
