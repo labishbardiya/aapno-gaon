@@ -42,8 +42,12 @@ export default async function Register({ searchParams }: { searchParams: Promise
     </form>
     <h2>Reports</h2>
     {reports.length ? <ul className="register-list">{reports.map(report => <li key={report.ticket_code}>
-      <strong><a href={`/register/${report.ticket_code}`}>{report.ticket_code}</a></strong> · {report.ward} · {statuses[report.status as keyof typeof statuses]}
-      {report.due_on && <p>Due <time dateTime={report.due_on}>{report.due_on}</time>{report.overdue && ' · Overdue'}</p>}
+      <div className="record-meta">
+        <strong><a href={`/register/${report.ticket_code}`}>{report.ticket_code}</a></strong>
+        <span>{report.ward}</span>
+        <span className="record-status" data-status={report.status}>{statuses[report.status as keyof typeof statuses]}</span>
+      </div>
+      {report.due_on && <p>Due <time dateTime={report.due_on}>{report.due_on}</time>{report.overdue && <strong className="overdue-label">Overdue</strong>}</p>}
       <p>{report.supporters} supporting</p>
       <p>{report.category} — {report.description}</p>
     </li>)}</ul> : <p>{hi ? 'इन फ़िल्टरों से कोई स्वीकृत रिपोर्ट नहीं मिली।' : 'No approved reports match these filters.'}</p>}

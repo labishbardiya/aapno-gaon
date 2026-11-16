@@ -25,7 +25,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       <head><ColorSchemeScript forceColorScheme="light" /></head>
       <body><MantineProvider forceColorScheme="light"><a className="skip-link" href="#main">{hi ? 'मुख्य सामग्री पर जाएँ' : 'Skip to main content'}</a>
         <header className="site-header"><div className="site-bar">
-          <a href="/" className="wordmark"><span aria-hidden="true">आ</span>AAPNO GAON</a>
+          <a href="/" className="wordmark"><span aria-hidden="true">आ</span><strong>{hi ? 'आपणो गाँव' : 'AAPNO GAON'}</strong></a>
           <nav className="site-nav" aria-label={hi ? 'मुख्य नेविगेशन' : 'Main navigation'}>
             {links.map(([href, label]) => <a href={href} key={href}>{label}</a>)}
           </nav>

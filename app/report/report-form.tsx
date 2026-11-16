@@ -148,7 +148,7 @@ export default function ReportForm({ wards, places, language }: { language: 'en'
     <p>Save your private tracking link to check the status.</p><a href={receipt.receiptUrl}>{hi ? 'अपनी रिपोर्ट की स्थिति देखें' : 'Track your report'}</a></section>;
 
   return (
-    <form className="report-form" onSubmit={submit}>
+    <form className="report-form issue-form" onSubmit={submit}>
       <p>Staff review reports before publication. Leave personal details out of the description.</p>
       <label>{hi ? 'गाँव' : 'Village'}<select name="ward" required value={ward} onChange={event => { setWard(event.target.value); setNearby([]); }}><option value="" disabled>{hi ? 'गाँव चुनें' : 'Select a village'}</option>
         {wards.map(ward => <option key={ward.id} value={ward.id}>{ward.name}</option>)}</select></label>
@@ -159,7 +159,7 @@ export default function ReportForm({ wards, places, language }: { language: 'en'
       <label>{hi ? 'पास का पहचान स्थल' : 'Nearby landmark'}<input name="landmark" maxLength={200} required /></label>
       <label>{hi ? 'समस्या का विवरण' : 'Describe the issue'}<textarea name="description" value={description} onChange={event => setDescription(event.target.value)} rows={5} maxLength={2000} required /></label>
       <Dictation append={phrase => setDescription(previous => (previous + " " + phrase).trimStart().slice(0, 2000))} />
-      <fieldset><legend>{hi ? 'समस्या का स्थान (वैकल्पिक)' : 'Issue location (optional)'}</legend>
+      <fieldset className="issue-map-panel"><legend>{hi ? 'समस्या का स्थान (वैकल्पिक)' : 'Issue location (optional)'}</legend>
         <button type="button" onClick={locate} disabled={locating || pending}>{locating ? 'Finding location…' : 'Use my current location'}</button>
         <p>Tap the map or drag the pin to mark where the issue is. You can also report using just the ward and landmark.</p>
         {places.length > 0 && <label>{hi ? 'स्थानीय जगह खोजें' : 'Search local places'}<input list="local-places" value={place} onChange={event => {

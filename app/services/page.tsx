@@ -30,6 +30,7 @@ export default async function ServicesPage({ searchParams }: {
   return <main id="main" className="content screen-services" lang={hi ? 'hi' : 'en'}>
     <nav className="home-links"><a href={hi ? '/services' : '/services?lang=hi'}>{hi ? 'English' : 'हिन्दी'}</a></nav>
     <h1>{t('Community services', 'सामुदायिक सेवाएँ')}</h1>
+    <div className="service-layout"><div className="service-directory">
     <h2>{t('Village directory', 'गाँव निर्देशिका')}</h2>
     <ul>{wards.map(ward => <li key={ward.id}><a href={`/register?ward=${ward.id}`}>{ward.name}</a>{ward.coverage_hint && <p>{ward.coverage_hint}</p>}</li>)}</ul>
     {sections.map(([section, title]) => <section key={section} id={section}>
@@ -45,6 +46,7 @@ export default async function ServicesPage({ searchParams }: {
       <strong>{item.kind === 'lost' ? t('Lost', 'खोया') : t('Found', 'मिला')} · {item.ward}</strong>
       <p>{item.detail}</p>
     </li>)}</ul>
+    </div><section className="service-request">
     <h2 id="community-request">{t('Lost and found or blood requests', 'खोया-पाया या रक्त अनुरोध')}</h2>
     {params.saved && <p role="status">{t('Saved for staff review.', 'कर्मचारी समीक्षा के लिए अनुरोध सहेजा गया।')}</p>}
     {params.error && <p role="alert">{t('Check your details and try again.', 'जानकारी जाँचकर फिर कोशिश करें।')}</p>}
@@ -65,5 +67,6 @@ export default async function ServicesPage({ searchParams }: {
       <label><span><input type="checkbox" name="consent" required /> {t('Staff may contact me about this submission.', 'कर्मचारी इस अनुरोध के बारे में मुझसे संपर्क कर सकते हैं।')}</span></label>
       <button disabled={!wards.length}>{t('Send for review', 'समीक्षा के लिए भेजें')}</button>
     </form>
+    </section></div>
   </main>;
 }

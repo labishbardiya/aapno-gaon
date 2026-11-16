@@ -14,19 +14,21 @@ export default async function Home() {
     ['/services#community-request', '♡', t('Blood requests', 'रक्त अनुरोध')],
   ];
   return <main id="main" className="home">
-    <section className="village-intro">
+    <div className="home-masthead">
+      <section className="village-intro">
       <h1 lang="hi">आपणो गाँव</h1>
       <p className="roman-name" lang="en">AAPNO GAON</p>
       <p className="village-tagline" lang="hi">आपणो गाँव, आपणी पंचायत</p>
     </section>
     <section className="report-entry">
       <h2>{t('Report a local problem', 'गाँव की समस्या दर्ज करें')}</h2>
-      <p>{t('Tell us what needs fixing and where. Use your private link to follow the work.', 'बताएँ कि समस्या क्या है और कहाँ है। काम की स्थिति अपने निजी लिंक से देखें।')}</p>
+      <p>{t('Tell us what needs fixing. Follow the work with your private link.', 'समस्या बताएँ। काम की स्थिति अपने निजी लिंक से देखें।')}</p>
       <div className="village-actions">
         <a href="/report">{t('Report a problem', 'समस्या दर्ज करें')}</a>
         <a href="/register">{t('View register', 'रजिस्टर देखें')}</a>
       </div>
     </section>
+    </div>
     <section className="quick-access">
       <h2>{t('Quick access', 'सीधे जाएँ')}</h2>
       <ul>{shortcuts.map(([url, icon, label]) => <li key={url}><a href={url}>
