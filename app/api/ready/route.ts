@@ -13,7 +13,7 @@ export async function GET() {
       pool = new Pool({
         connectionString,
         max: 1,
-        connectionTimeoutMillis: 750,
+        connectionTimeoutMillis: 3000,
         query_timeout: 750,
         idleTimeoutMillis: 5000,
       });
