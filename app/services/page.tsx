@@ -30,7 +30,7 @@ export default async function ServicesPage({ searchParams }: {
   return <main id="main" className="content screen-services" lang={hi ? 'hi' : 'en'}>
     <nav className="home-links"><a href={hi ? '/services' : '/services?lang=hi'}>{hi ? 'English' : 'हिन्दी'}</a></nav>
     <h1>{t('Community services', 'सामुदायिक सेवाएँ')}</h1>
-    <h2>{t('Ward directory', 'वार्ड निर्देशिका')}</h2>
+    <h2>{t('Village directory', 'गाँव निर्देशिका')}</h2>
     <ul>{wards.map(ward => <li key={ward.id}><a href={`/register?ward=${ward.id}`}>{ward.name}</a>{ward.coverage_hint && <p>{ward.coverage_hint}</p>}</li>)}</ul>
     {sections.map(([section, title]) => <section key={section} id={section}>
       <h2>{title}</h2>
@@ -54,7 +54,7 @@ export default async function ServicesPage({ searchParams }: {
         <option value="lost">{t('Lost item', 'खोई वस्तु')}</option><option value="found">{t('Found item', 'मिली वस्तु')}</option>
         <option value="blood-request">{t('Blood request', 'रक्त अनुरोध')}</option><option value="donor">{t('Register as a donor', 'रक्तदाता के रूप में पंजीकरण')}</option>
       </select></label>
-      <label>{t('Ward', 'वार्ड')}<select name="ward" required>{wards.map(ward => <option key={ward.id} value={ward.id}>{ward.name}</option>)}</select></label>
+      <label>{t('Village', 'गाँव')}<select name="ward" required>{wards.map(ward => <option key={ward.id} value={ward.id}>{ward.name}</option>)}</select></label>
       <label>{t('Blood group (for blood requests and donors)', 'रक्त समूह (रक्त अनुरोध और रक्तदाताओं के लिए)')}<select name="blood">
         <option value="">{t('Not applicable', 'लागू नहीं')}</option>
         {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(group => <option key={group}>{group}</option>)}

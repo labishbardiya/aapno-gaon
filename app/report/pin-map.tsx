@@ -19,7 +19,7 @@ export default function PinMap({ center, deviceCenter, onChange }: { center: Poi
     let instance: Map;
     try {
       instance = new Map({
-        container: container.current, center: [75.386, 26.972], zoom: 14, maxZoom: 19,
+        container: container.current, center: [75.3631, 26.8899], zoom: 14, maxZoom: 19,
         renderWorldCopies: false, cooperativeGestures: true,
         style: {
           version: 8,

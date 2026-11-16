@@ -6,7 +6,7 @@ export default async function Home() {
   const shortcuts = [
     ['/report', '+', t('Report a problem', 'समस्या दर्ज करें')],
     ['/register', '☷', t('Report register', 'रिपोर्ट रजिस्टर')],
-    ['/overview', '▥', t('Ward statistics', 'वार्ड आँकड़े')],
+    ['/overview', '▥', t('Village statistics', 'गाँव के आँकड़े')],
     ['/services#notice', '◫', t('Notices', 'सूचनाएँ')],
     ['/services#guide', '◇', t('Service guides', 'सेवा मार्गदर्शिका')],
     ['/services#contact', '☎', t('Important numbers', 'ज़रूरी नंबर')],

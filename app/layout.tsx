@@ -18,7 +18,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   const links = [
     ['/report', hi ? 'समस्या दर्ज करें' : 'Report an issue'],
     ['/register', hi ? 'रिपोर्ट देखें' : 'Register'],
-    ['/overview', hi ? 'वार्ड सारांश' : 'Ward overview'],
+    ['/overview', hi ? 'गाँव का सारांश' : 'Village overview'],
   ];
   return (
     <html lang={language} {...mantineHtmlProps}>

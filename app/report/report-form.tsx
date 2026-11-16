@@ -37,8 +37,8 @@ export default function ReportForm({ wards, places, language }: { language: 'en'
       navigator.permissions.query({ name: 'geolocation' }).then(permission => {
         if (!active || permission.state !== 'granted') return;
         navigator.geolocation.getCurrentPosition(({ coords }) => {
-          if (active && !moved.current && Math.abs(coords.latitude - 26.972) < 0.15 &&
-              Math.abs(coords.longitude - 75.386) < 0.15) {
+          if (active && !moved.current && Math.abs(coords.latitude - 26.8899) < 0.15 &&
+              Math.abs(coords.longitude - 75.3631) < 0.15) {
             setDeviceCenter({ latitude: coords.latitude, longitude: coords.longitude, source: 'device' });
           }
         }, () => {}, { timeout: 5000 });
@@ -150,7 +150,7 @@ export default function ReportForm({ wards, places, language }: { language: 'en'
   return (
     <form className="report-form" onSubmit={submit}>
       <p>Staff review reports before publication. Leave personal details out of the description.</p>
-      <label>{hi ? 'वार्ड' : 'Ward'}<select name="ward" required value={ward} onChange={event => { setWard(event.target.value); setNearby([]); }}><option value="" disabled>{hi ? 'वार्ड चुनें' : 'Select a ward'}</option>
+      <label>{hi ? 'गाँव' : 'Village'}<select name="ward" required value={ward} onChange={event => { setWard(event.target.value); setNearby([]); }}><option value="" disabled>{hi ? 'गाँव चुनें' : 'Select a village'}</option>
         {wards.map(ward => <option key={ward.id} value={ward.id}>{ward.name}</option>)}</select></label>
       {wards.find(item => String(item.id) === ward)?.coverage_hint && <p>{wards.find(item => String(item.id) === ward)?.coverage_hint}</p>}
       <label>{hi ? 'श्रेणी' : 'Category'}<select name="category" required value={category} onChange={event => { setCategory(event.target.value); setNearby([]); }}><option value="" disabled>{hi ? 'श्रेणी चुनें' : 'Select a category'}</option>
@@ -215,7 +215,7 @@ export default function ReportForm({ wards, places, language }: { language: 'en'
           <button type="button" disabled={readingPhoto || pending} onClick={() => setPhoto('')}>{hi ? 'फ़ोटो हटाएँ' : 'Remove photo'}</button></>}
       </fieldset>
       {nearby.length > 0 && <fieldset>
-        <legend>{hi ? 'इस वार्ड की मिलती-जुलती खुली रिपोर्टें' : 'Similar open reports in this ward'}</legend>
+        <legend>{hi ? 'इस गाँव की मिलती-जुलती खुली रिपोर्टें' : 'Similar open reports in this village'}</legend>
         {nearby.map(report => <div key={report.ticket_code}>
           <p>{report.ticket_code} · {report.summary} · {report.supporters} supporting</p>
           <button type="button" disabled={supported.includes(report.ticket_code)} onClick={() => support(report.ticket_code)}>

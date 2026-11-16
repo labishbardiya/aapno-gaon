@@ -30,7 +30,7 @@ export default async function Register({ searchParams }: { searchParams: Promise
     <form className="report-form">
       <input type="hidden" name="view" value={view} />
       <label>{hi ? 'खोजें' : 'Search'}<input name="q" defaultValue={q} placeholder={hi ? "शब्द या रिपोर्ट आईडी" : "Keyword or ticket ID"} /></label>
-      <label>{hi ? 'वार्ड' : 'Ward'}<select name="ward" defaultValue={ward}><option value="">{hi ? 'सभी वार्ड' : 'All wards'}</option>
+      <label>{hi ? 'गाँव' : 'Village'}<select name="ward" defaultValue={ward}><option value="">{hi ? 'सभी गाँव' : 'All villages'}</option>
         {wards.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
       <label>{hi ? 'श्रेणी' : 'Category'}<select name="category" defaultValue={category}><option value="">{hi ? 'सभी श्रेणियाँ' : 'All categories'}</option>
         {categories.map(item =>
