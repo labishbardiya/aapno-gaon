@@ -1,4 +1,6 @@
 import { unstable_cache } from 'next/cache';
+import { createClient } from 'redis';
+import { Pool } from 'pg';
 import { readPool } from './report-store';
 
 export type WardSummary = {
@@ -7,8 +9,8 @@ export type WardSummary = {
   received: number; pending: number; resolved: number;
 };
 
-async function queryOverview(days: number, internal: boolean, category: string) {
-  const result = await readPool().query<WardSummary>(
+async function queryOverview(days: number, internal: boolean, category: string, pool = readPool()) {
+  const result = await pool.query<WardSummary>(
     `select w.name, w.center_latitude as latitude, w.center_longitude as longitude,
        count(r.id)::int as received,
        count(r.id) filter (where r.status in ('SUBMITTED', 'IN_PROGRESS'))::int as pending,
@@ -36,5 +38,43 @@ export function getOverviewRows(days: number, internal: boolean, category: strin
   if (internal || process.env.PUBLIC_OVERVIEW_CACHE === 'off') {
     return queryOverview(days, internal, category);
   }
+  if (process.env.DEMO_REDIS_URL && process.env.DEMO_REPLICA_URL) {
+    return getSharedOverview(days, category).then(result => result.rows);
+  }
   return queryPublicOverview(days, category);
+}
+
+let sharedConnection: ReturnType<typeof connectSharedCache> | undefined;
+let replicaPool: Pool | undefined;
+
+export async function getSharedOverview(days: number, category: string) {
+  const url = process.env.DEMO_REDIS_URL;
+  const connectionString = process.env.DEMO_REPLICA_URL;
+  if (!url || !connectionString) throw new Error('Shared demo services are not configured');
+  const key = `public-overview:v1:${days}:${category}`;
+  const cache = await (sharedConnection ??= connectSharedCache(url)).catch(() => null);
+  const hit = await cache?.get(key).catch(() => null);
+  if (hit) return { rows: JSON.parse(hit) as WardSummary[], cache: 'HIT', source: 'redis' };
+
+  if (!replicaPool) {
+    replicaPool = new Pool({ connectionString, max: 2, connectionTimeoutMillis: 2000, query_timeout: 2000 });
+    replicaPool.on('error', onReplicaError);
+  }
+  const rows = await queryOverview(days, false, category, replicaPool);
+  await cache?.set(key, JSON.stringify(rows), { EX: 30 }).catch(() => null);
+  return { rows, cache: 'MISS', source: 'replica' };
+}
+
+function onReplicaError(error: Error) {
+  console.error('Demo replica connection:', error.message);
+}
+
+function connectSharedCache(url: string) {
+  const client = createClient({ url, disableOfflineQueue: true, socket: { connectTimeout: 1000, reconnectStrategy: false } });
+  client.on('error', error => console.error('Demo Redis connection:', error.message));
+  client.on('end', () => { sharedConnection = undefined; });
+  return client.connect().then(() => client).catch(error => {
+    sharedConnection = undefined;
+    throw error;
+  });
 }
