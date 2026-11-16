@@ -105,6 +105,10 @@ Mantine provides interface components. MapLibre shows maps. PostgreSQL stores re
 4. Set the server environment variables.
 5. Apply new database migrations before you deploy code that uses them.
 
+## Local scaling demo
+
+Use the [Docker scaling demo](demo/scale/README.md) to run four app instances behind Nginx and verify Redis cache sharing, PostgreSQL replication, and app failover with synthetic data.
+
 ## Verify the release
 
 GitHub Actions checks types and builds the Docker image on each push and pull request. It applies the migrations to test PostgreSQL. It checks report submission, duplicate retries, private tracking, and public visibility.
