@@ -21,3 +21,28 @@ The synthetic staff accounts use `@demo.example` with the password `DhindaDemo20
 | sanitation | Waste, drainage, waterlogging, and sanitation |
 
 These credentials belong to a local authentication simulator. The database and Redis ports are private to the Compose network. Only the Nginx port is published, on loopback. All four app instances share the same host.
+
+## Compare load-balancing algorithms
+
+Use Python 3 on the Docker Desktop host. The same four app containers serve all four loopback ports.
+
+| Algorithm | Port |
+| --- | --- |
+| Round robin | 3195 |
+| Least connections | 3201 |
+| IP hash | 3202 |
+| Power of two choices, using least connections | 3203 |
+
+```sh
+python3 compare-balancers.py --requests 1200 --workers 24
+```
+
+Set `COMPOSE_PROJECT_NAME` if you started the stack under a different project name. On the existing rehearsal stack, run:
+
+```sh
+COMPOSE_PROJECT_NAME=aapno-scale-check python3 compare-balancers.py --requests 1200 --workers 24
+```
+
+Each run sends the same mix of overview and register reads. The table reports how many requests each instance served and the increase in its container CPU time. CPU milliseconds are accumulated across cores. For example, 2,000 CPU ms over two elapsed seconds is about one fully used core on average.
+
+On one source IP, IP hash sends requests to one instance. Round robin evenly distributes request counts. Least connections and power of two choices distribute work according to active connections. The exact CPU times can vary with caching, runtime warm-up and other activity. Repeat the runs before drawing performance conclusions.
