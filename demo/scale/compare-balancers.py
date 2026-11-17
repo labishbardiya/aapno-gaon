@@ -5,19 +5,27 @@ from concurrent.futures import ThreadPoolExecutor
 import json
 import os
 from subprocess import check_output
-from time import monotonic
+from time import monotonic, sleep
 from urllib.request import urlopen
 
+algorithms = {
+    'round-robin': ('Round robin', 3195),
+    'least-connections': ('Least connections', 3201),
+    'ip-hash': ('IP hash', 3202),
+    'power-of-two': ('Power of two', 3203),
+}
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--requests', type=int, default=1200)
 parser.add_argument('--workers', type=int, default=24)
+parser.add_argument('--algorithm', choices=algorithms, help='Run only the selected algorithm')
+parser.add_argument('--seconds', type=int, default=0, help='Spread requests over this many seconds')
 args = parser.parse_args()
 if args.requests < 1 or args.workers < 1:
     parser.error('requests and workers must be positive')
+if args.seconds < 0:
+    parser.error('seconds must be zero or positive')
 
 project = os.getenv('COMPOSE_PROJECT_NAME', 'aapno-scale')
-algorithms = {'round robin': 3195, 'least connections': 3201,
-              'IP hash': 3202, 'random two': 3203}
 containers = {f'app-{i}': f'{project}-app-{i}-1' for i in range(1, 5)}
 upstreams = {}
 for name, container in containers.items():
@@ -40,15 +48,27 @@ def request(port, index):
         return upstreams[response.headers['X-Demo-Upstream'].split(', ')[-1]]
 
 
-print('Algorithm          seconds   ' + '   '.join(f'{name} req / CPU ms' for name in containers))
-for algorithm, port in algorithms.items():
+def compare(algorithm, port):
     for i in range(12):
         request(port, i)
     before = {name: cpu_ms(container) for name, container in containers.items()}
     started = monotonic()
+
+    def send(index):
+        delay = started + index * args.seconds / args.requests - monotonic()
+        if delay > 0:
+            sleep(delay)
+        return request(port, index)
+
     with ThreadPoolExecutor(max_workers=args.workers) as executor:
-        counts = Counter(executor.map(lambda index: request(port, index), range(args.requests)))
+        counts = Counter(executor.map(send, range(args.requests)))
     elapsed = monotonic() - started
     after = {name: cpu_ms(container) for name, container in containers.items()}
     cells = '   '.join(f'{counts[name]:5} / {after[name]-before[name]:7.1f}' for name in containers)
     print(f'{algorithm:18} {elapsed:7.2f}   {cells}', flush=True)
+
+
+print('Algorithm          seconds   ' + '   '.join(f'{name} req / CPU ms' for name in containers), flush=True)
+selected = [algorithms[args.algorithm]] if args.algorithm else algorithms.values()
+for algorithm, port in selected:
+    compare(algorithm, port)

@@ -18,7 +18,7 @@ with fixtures(n,village,category,landmark,description,state,days,fix) as (values
 (16,'Kanderiyan Ki Dhani','other','Village meeting area','The direction sign at the entrance has turned and now points down the wrong lane.','REVIEW',1,null)
 ), inserted as (
 insert into mysociety.reports (ticket_code,receipt_token_hash,ward_id,category,landmark,description,status,visibility,version,assigned_staff_id,created_at,updated_at,due_on,resolved_at)
-select 'MS-DEMO' || lpad(f.n::text,12,'0'), encode(sha256(gen_random_uuid()::text::bytea),'hex'),
+select 'MS-DE0D0' || lpad(f.n::text,13,'0'), encode(sha256(gen_random_uuid()::text::bytea),'hex'),
 w.id,f.category,f.landmark,f.description,case when f.state='REVIEW' then 'SUBMITTED' else f.state end,
 case when f.state='REVIEW' then 'PENDING_REVIEW' else 'APPROVED' end,
 case f.state when 'RESOLVED' then 5 when 'IN_PROGRESS' then 4 when 'REVIEW' then 1 else 2 end,
@@ -31,7 +31,7 @@ on conflict (ticket_code) do nothing returning *
 )
 insert into mysociety.report_events (report_id,actor_id,event_type,old_status,new_status,note,created_at)
 select i.id,e.actor,e.kind,e.old_status,e.new_status,e.note,e.at
-from inserted i join fixtures f on i.ticket_code='MS-DEMO' || lpad(f.n::text,12,'0')
+from inserted i join fixtures f on i.ticket_code='MS-DE0D0' || lpad(f.n::text,13,'0')
 cross join lateral (values
 (1,'REPORT_CREATED',null::uuid,null,'SUBMITTED',null,i.created_at,true),
 (2,'AUTO_ASSIGNED',null::uuid,null,null,i.assigned_staff_id::text,i.created_at,i.assigned_staff_id is not null),
