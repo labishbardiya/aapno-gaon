@@ -152,7 +152,8 @@ h1, h2 { text-wrap: balance; overflow-wrap: break-word; min-width: 0; }
 .quick-access li { border-bottom: 1px solid var(--line); min-width: 0; }
 .quick-access li:nth-child(odd) { border-right: 1px solid var(--line); }
 .quick-access a { flex-direction: row; align-items: center; gap: .8rem; min-height: 3.55rem; border: 0; border-radius: 0; background: transparent; padding: .7rem 1rem; }
-.quick-access a:hover { background: var(--surface); text-decoration: underline; }
+.quick-access a { transition: background-color .16s ease, box-shadow .16s ease; }
+.quick-access a:is(:hover, :focus-visible) { background: var(--sage); box-shadow: inset .2rem 0 0 var(--green); }
 .quick-access a span { flex: 0 0 2rem; background: var(--sage); border-radius: .25rem; }
 .content { width: min(calc(100% - 2 * var(--gutter)), 52rem); }
 :is(.screen-staff, .screen-admin, .screen-overview, .screen-register, .screen-services, .screen-report) { width: min(calc(100% - 2 * var(--gutter)), calc(var(--site-width) - 2 * var(--gutter))); }
