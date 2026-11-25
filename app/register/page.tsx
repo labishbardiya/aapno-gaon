@@ -16,12 +16,29 @@ export default async function Register({ searchParams }: { searchParams: Promise
   const view = field('view', 12);
   const sort = field('sort', 10) === 'affected' ? 'affected' : 'recent';
   const category = field('category', 20);
-  const [wards, results] = await Promise.all([getWards(), getPublicReports(q, ward, status, category, field('before', 24), sort, view)]);
+  let wards: Awaited<ReturnType<typeof getWards>> = [];
+  let results: Awaited<ReturnType<typeof getPublicReports>> = [];
+  let databaseUnavailable = false;
+
+  try {
+    [wards, results] = await Promise.all([
+      getWards(),
+      getPublicReports(q, ward, status, category, field('before', 24), sort, view),
+    ]);
+  } catch (error) {
+    databaseUnavailable = true;
+    console.error('[register] Unable to load public reports:', error);
+  }
   const reports = results.slice(0, 50);
   const next = reports.at(-1)?.ticket_code;
 
   return <main id="main" className="content screen-register">
     <h1>{hi ? 'सार्वजनिक रजिस्टर' : 'Public register'}</h1>
+    {databaseUnavailable && <p role="status" className="notice">
+      {hi
+        ? 'सार्वजनिक रिपोर्ट अभी उपलब्ध नहीं हैं क्योंकि डेटाबेस कॉन्फ़िगर नहीं है।'
+        : 'Public reports are unavailable because the database is not configured.'}
+    </p>}
     <nav className="home-links" aria-label="Quick report filters">
       {Object.entries({ '': 'All reports', overdue: 'Overdue', forwarded: 'Forwarded', evidence: 'Photo evidence' })
         .map(([key, label]) => <a key={key} aria-current={view === key ? 'page' : undefined}
