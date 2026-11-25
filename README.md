@@ -323,6 +323,7 @@ docker run --rm --env-file .env.local -p 127.0.0.1:3000:3000 aapno-gaon
 
 | Page or route | Function |
 |---|---|
+| `/` | Browse quick links to reports, the public register, village statistics, and services; links highlight on hover and keyboard focus. |
 | `/report` | Submit an issue with optional map pin, photo, and private callback details. |
 | `/track/<token>` | View your report status and due date using the private receipt. |
 | `/register` | Find approved reports, public updates, and approved evidence. |
